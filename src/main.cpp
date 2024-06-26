@@ -42,12 +42,12 @@ uint8_t* buf = arduboy.sBuffer;
 // network data
 uint8_t role;
 
-struct Player { // player data packet to send over netwrok
+struct player_t { // player data packet to send over netwrok
     int16_t posX; // Q8
     int16_t posY; // Q8
     volatile bool otherPlayerHit; 
 };
-Player player;
+player_t player;
 
 uint16_t orientation = UFIX16(1.5f, 15);    // brad [0,2] in Q15
 
@@ -166,12 +166,12 @@ void setup() {
     if (role == TWI_TARGET) {
         twi_attachSlaveRxEvent(rx_event);
         twi_attachSlaveTxEvent(tx_event);
-        player.posX = TARGET_START_X;
-        player.posY = TARGET_START_Y;
+        player.posX = targetStartX;
+        player.posY = targetStartY;
 
     } else {
-        player.posX = CONTROLLER_START_X;
-        player.posY = CONTROLLER_START_Y;
+        player.posX = controllerStartX;
+        player.posY = controllerStartY;
     }
 }
 
@@ -323,7 +323,7 @@ void loop() {
         //save distance, for sprite clipping
         zbuf[x] = perpWallDist << 1;    // Q8
 
-        uint16_t perpWallDistRecip = recip(perpWallDist);
+        uint16_t invPerpWallDist = recip(perpWallDist);
         //Calculate height of line to draw on screen
         //int8_t lineHeight = (perpWallDist > (1 << 7)) ? (FBH << 7) / perpWallDist : FBH;  // refcode
         //int8_t lineHeight = (perpWallDist > (1 << 7)) ? recip(perpWallDist) >> 3 : FBH;   // optimized for wallHeight=64
@@ -331,8 +331,8 @@ void loop() {
         int8_t lineHeight;
         int8_t halfLineHeight64;
         if (perpWallDist > (1 << 7)) {
-            lineHeight = UMUL32(wallHeight, recip(perpWallDist)) >> 9;
-            halfLineHeight64 = perpWallDistRecip >> 3 >> 1;
+            lineHeight = UMUL32(wallHeight, invPerpWallDist) >> 9;
+            halfLineHeight64 = invPerpWallDist >> 3 >> 1;
         } else {
             lineHeight = FBH;
             halfLineHeight64 = FBH / 2;
