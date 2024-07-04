@@ -41,7 +41,6 @@
 #define TWI_STX   4
 
 #define TWI_CONTROLLER 0
-#define TWI_TARGET 1
 
 #ifdef __cplusplus
 extern "C" {
@@ -49,6 +48,7 @@ extern "C" {
     void twi_init(void);
     void twi_disable(void);
     void twi_setAddress(uint8_t);
+    void twi_setGeneralCall(bool);
     void twi_setFrequency(uint32_t);
     uint8_t twi_readFrom(uint8_t, uint8_t*, uint8_t, uint8_t);
     uint8_t twi_writeTo(uint8_t, uint8_t*, uint8_t, uint8_t, uint8_t);
@@ -61,7 +61,7 @@ extern "C" {
     void twi_setTimeoutInMicros(uint32_t, bool);
     void twi_handleTimeout(bool);
     bool twi_manageTimeoutFlag(bool);
-    uint8_t twi_handshake(uint8_t);
+    uint8_t twi_handshake(const uint8_t *, uint8_t);
 #ifdef __cplusplus
 }
 #endif

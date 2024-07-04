@@ -72,7 +72,7 @@ static volatile uint8_t twi_rxBufferIndex;
 
 static volatile uint8_t twi_error;
 
-static volatile bool twi_handshakeIncomplete = true;
+volatile uint8_t twi_handshakeState;
 /* 
  * Function twi_init
  * Desc     readys twi pins and sets twi bitrate
@@ -124,15 +124,25 @@ void twi_disable(void)
 }
 
 /* 
- * Function twi_slaveInit
- * Desc     sets slave address and enables interrupt
- * Input    none
+ * Function twi_setAddress
+ * Desc     sets slave address
+ * Input    address: 7bit i2c device address
  * Output   none
  */
 void twi_setAddress(uint8_t address)
 {
   // set twi slave address (skip over TWGCE bit)
   TWAR = address << 1;
+}
+/* 
+ * Function twi_setGeneralCall
+ * Desc     enables or disables responding to general calls
+ * Input    generalCall: whether to enable or disable general calls
+ * Output   none
+ */
+void twi_setGeneralCall(bool generalCall) 
+{
+    TWAR |= generalCall;
 }
 
 /* 
@@ -511,31 +521,39 @@ bool twi_manageTimeoutFlag(bool clear_flag){
  * Input    none
  * Output   none
  */
-void twi_handshakeTxEvent() {
-    twi_handshakeIncomplete = false;
-    twi_transmit((uint8_t *)&twi_handshakeIncomplete, 1);
+void handshakeTxEvent() {
+    twi_handshakeState++;
 }
 
 /*
  * Function twi_handshake
- * Desc     handshake and set role
- * Input    address: address of target (slave)
- * Output   controller (master) - 0, target (slave) - 1
+ * Desc     handshake and set role with a variable number of players
+ * Input    addresses: array with length of numPlayers in PROGMEM
+ *                     addresses[0] is unused
+ *          numPlayers: the number of players in-game
+ * Output   controller (master) -> 0, target (slave) -> 1 to numPlayers - 1
  */
-uint8_t twi_handshake(uint8_t address) {
-    uint8_t role;
-    uint8_t data;
+uint8_t twi_handshake(const uint8_t *addresses, uint8_t numPlayers) {
+    uint8_t role = 0;
+    uint8_t dummy;
 
-    if (twi_readFrom(address, &data, 1, false)) {
-        role = 0;
-        twi_handshakeIncomplete = data;
-    } else {
-        role = 1;
-        twi_setAddress(address);
-        twi_attachSlaveTxEvent(twi_handshakeTxEvent);
+    for (uint8_t i = numPlayers - 1; i > 0; i--) { // numPlayers-1, ..., 1
+        if (!twi_readFrom(pgm_read_byte(&addresses[i]), &dummy, 1, true)) { // if target number i does not exist
+            role = i;
+            twi_setAddress(pgm_read_byte(&addresses[i]));
+            twi_attachSlaveTxEvent(handshakeTxEvent);
+            break;
+        }
     }
-    while (twi_handshakeIncomplete) {}
-
+    /* 
+    twi_handshakeState keeps track of how many times handshakeTxEvent has been called.
+    handshakeTxEvent is called whenever another player asks data from us to determine if we exist.
+    handshakeTxEvent can be called a certain number of times until a controller is assigned and this function can exit.
+    Coincedentally, that number of times is equal to role.
+    So, while twi_handshakeState is less than role we wait, and when role is equal to twi_handshakeState we can exit because we know there is a controller.
+    */
+    while (twi_handshakeState < role) {}
+    
     return role;
 }
 

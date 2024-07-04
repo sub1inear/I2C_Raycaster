@@ -19,6 +19,7 @@ inline void const* pgm_read_ptr(void const* p) { return *(void const**)p; }
 
 Arduboy2Base arduboy;
 
+#ifdef FPS_DEBUG
 class Arduboy2Ex {
 public:
     static bool nextFrameMiniDEV() {
@@ -33,22 +34,23 @@ public:
         return ret;
     }
 };
-
-constexpr uint8_t targetAddress = 0x10;
+#endif
 
 // Arduboy framebuffer
 uint8_t* buf = arduboy.sBuffer;
 
 // network data
+constexpr uint8_t numPlayers = 4;
+const uint8_t targetAddresses[numPlayers] PROGMEM = {
+    0x00, // dummy data
+    0x12,
+    0x11,
+    0x10
+};
+
 uint8_t role;
 
-struct player_t { // player data packet to send over netwrok
-    int16_t posX; // Q8
-    int16_t posY; // Q8
-    volatile bool otherPlayerHit; 
-};
-player_t player;
-
+// private player data
 uint16_t orientation = UFIX16(1.5f, 15);    // brad [0,2] in Q15
 
 // (dirX, dirY) is the unit vector derived from orientation
@@ -67,16 +69,18 @@ constexpr int16_t friction = FIX16(0.9f, 8);    // Q8
 
 uint16_t zbuf[FBW]; // Q8
 
+// public player data / other player data
 struct sprite_t {
-    int16_t x;  // Q8
-    int16_t y;  // Q8
-    bool playerHit; // comes with sprite data, if we are hit
+    uint8_t role;
+    uint8_t playerHit;
+    int16_t posX;  // Q8
+    int16_t posY;  // Q8
 };
 
-constexpr uint8_t numSprites = 1;
-sprite_t sprite[numSprites] = {
-    { 0, 0, false },
-};
+constexpr uint8_t numSprites = numPlayers;
+volatile sprite_t sprites[numSprites];
+
+// line rendering data
 
 constexpr uint8_t SET_MASK[8] = {
     0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80
@@ -144,15 +148,13 @@ void draw_vline(uint8_t x, int16_t y0, int16_t y1, uint16_t pat) {
 }
 
 void rx_event(uint8_t *buffer, int length) {
-    sprite[0].x = (buffer[1] << 8) | buffer[0];
-    sprite[0].y = (buffer[3] << 8) | buffer[2];
-    sprite[0].playerHit = buffer[4];
+    if (role != buffer[0]) {
+        sprites[buffer[0]] = *(sprite_t *)buffer;
+    }
 }
 void tx_event() {
-    twi_transmit((uint8_t *)&player.posX, 2);
-    twi_transmit((uint8_t *)&player.posY, 2);
-    twi_transmit((uint8_t *)&player.otherPlayerHit, 1);
-    player.otherPlayerHit = false;
+    twi_transmit((uint8_t *)&sprites[role], sizeof(sprite_t));
+    sprites[role].playerHit = 0xff;
 }
 
 void setup() {
@@ -162,23 +164,32 @@ void setup() {
     sincospi(orientation, &dirX, &dirY);
 
     twi_init();
-    role = twi_handshake(targetAddress);
-    if (role == TWI_TARGET) {
+    role = twi_handshake(targetAddresses, numPlayers);
+
+    sprites[role].role = role;
+    sprites[role].playerHit = 0xff;
+    // TODO: add more spawning locations
+    sprites[role].posX = controllerStartX;
+    sprites[role].posY = controllerStartY;
+
+    if (role > TWI_CONTROLLER) {
+        twi_setGeneralCall(true);
         twi_attachSlaveRxEvent(rx_event);
         twi_attachSlaveTxEvent(tx_event);
-        player.posX = targetStartX;
-        player.posY = targetStartY;
-
-    } else {
-        player.posX = controllerStartX;
-        player.posY = controllerStartY;
     }
 }
 
 void loop() {
+#ifdef FPS_DEBUG
     if (!Arduboy2Ex::nextFrameMiniDEV()) {
         return;
     }
+#else
+    if (!arduboy.nextFrame()) {
+        return;
+    }
+#endif
+
     arduboy.pollButtons();
     if (arduboy.pressed(UP_BUTTON)) {
         momX += MUL32(dirX, moveSpeed) >> 16;   // Q16
@@ -215,35 +226,49 @@ void loop() {
     //_RPT1(_CRT_WARN, "%3d, %3d\n", dX, dY);
 
     // move, if not blocked by a wall
-    uint8_t x0 = (player.posX + dX) >> 8;
-    uint8_t y0 = (player.posY +  0) >> 8;
-    uint8_t x1 = (player.posX +  0) >> 8;
-    uint8_t y1 = (player.posY + dY) >> 8;
+    uint8_t x0 = (sprites[role].posX + dX) >> 8;
+    uint8_t y0 = (sprites[role].posY +  0) >> 8;
+    uint8_t x1 = (sprites[role].posX +  0) >> 8;
+    uint8_t y1 = (sprites[role].posY + dY) >> 8;
 
-    if (MAP_LOOKUP(x0 * mapHeight + y0) == 0) player.posX += dX;
-    if (MAP_LOOKUP(x1 * mapHeight + y1) == 0) player.posY += dY;
+    if (MAP_LOOKUP(x0 * mapHeight + y0) == 0) sprites[role].posX += dX;
+    if (MAP_LOOKUP(x1 * mapHeight + y1) == 0) sprites[role].posY += dY;
 
     // apply friction
     momX = MUL32(momX, friction) >> 8;
     momY = MUL32(momY, friction) >> 8;
 
-    //vector perpendicular to dir, with length planeLen
+    // vector perpendicular to dir, with length planeLen
     int16_t planeX = MUL32(dirY, planeLen) >> 15;    // Q15
     int16_t planeY = MUL32(-dirX, planeLen) >> 15;   // Q15
 
     // send and recieve over I2C
     if (role == TWI_CONTROLLER) {
-        twi_writeTo(targetAddress, (uint8_t *)&player, 5, false, true); 
-        player.otherPlayerHit = false;
-        twi_readFrom(targetAddress,  (uint8_t *)&sprite[0], 5, true);
-    }
+        for (uint8_t i = 1; i < numPlayers; i++) {
+            // get data from target
+            twi_readFrom(pgm_read_byte(&targetAddresses[i]), (uint8_t *)&sprites[i], sizeof(sprite_t), true);
 
-    // flash screen if hit
-    if (sprite[0].playerHit) {
-        arduboy.fillScreen(WHITE);
-    } else {
-        arduboy.fillScreen(BLACK);
+            // broadcast it via general call
+            twi_writeTo(0x00, (uint8_t *)&sprites[i], sizeof(sprite_t), false, true);
+        }
+        twi_writeTo(0x00, (uint8_t *)&sprites[TWI_CONTROLLER], sizeof(sprite_t), false, true);
+        sprites[TWI_CONTROLLER].playerHit = 0xff;
     }
+    
+    // pre-rendering math
+
+    //which box of the map we're in
+    int8_t mapX = sprites[role].posX >> 8;
+    int8_t mapY = sprites[role].posY >> 8;
+
+    uint16_t otherPlayerMapIndexes[numPlayers];
+
+    bool hit = false;
+    for (uint8_t i = 0; i < numPlayers; i++) {
+        otherPlayerMapIndexes[i] = (sprites[i].posX >> 8) * mapHeight + (sprites[i].posY >> 8);
+        hit |= (sprites[i].playerHit == role);
+    }
+    arduboy.fillScreen(hit ? WHITE : BLACK);
 
     for (uint8_t x = 0; x < FBW; x++) {
 
@@ -253,10 +278,6 @@ void loop() {
         //calculate ray position and direction
         int16_t rayDirX = (dirX >> 1) + (MUL32(planeX, cameraX) >> 8); // Q14
         int16_t rayDirY = (dirY >> 1) + (MUL32(planeY, cameraX) >> 8); // Q14
-
-        //which box of the map we're in
-        int8_t mapX = player.posX >> 8;
-        int8_t mapY = player.posY >> 8;
 
         //length of ray from one x or y-side to next x or y-side
         uint16_t deltaDistX = recip(abs(rayDirX) >> 5);  // Q7
@@ -274,17 +295,17 @@ void loop() {
         //calculate step and initial sideDist
         if (rayDirX < 0) {
             stepX = -mapHeight;
-            fractX = player.posX - (mapX << 8);   // Q8
+            fractX = sprites[role].posX - (mapX << 8);   // Q8
         } else {
             stepX = +mapHeight;
-            fractX = (1 << 8) - (player.posX - (mapX << 8));  // Q8
+            fractX = (1 << 8) - (sprites[role].posX - (mapX << 8));  // Q8
         }
         if (rayDirY < 0) {
             stepY = -1;
-            fractY = player.posY - (mapY << 8);   // Q8
+            fractY = sprites[role].posY - (mapY << 8);   // Q8
         } else {
             stepY = +1;
-            fractY = (1 << 8) - (player.posY - (mapY << 8));  // Q8
+            fractY = (1 << 8) - (sprites[role].posY - (mapY << 8));  // Q8
         }
 
         //length of ray from current position to next x or y-side
@@ -294,11 +315,16 @@ void loop() {
         //perform DDA
         int8_t side = 0;    //was a NS or a EW wall hit?
         uint16_t mapIndex = mapX * mapHeight + mapY;  // [mapX][mapY] as 1-D index
-        uint16_t otherPlayerMapIndex = (sprite[0].x >> 8) * mapHeight + (sprite[0].y >> 8);
         do {
-            //check if laser beam has hit other player
-            if (firing && x > 60 && x < 68 && mapIndex == otherPlayerMapIndex) {
-                player.otherPlayerHit = true;
+            // check if laser beam has hit other player
+            if (firing && x > 60 && x < 68) {
+                // loop through all players
+                for (uint8_t i = 0; i < numPlayers; i++) {
+                    if (i != role && otherPlayerMapIndexes[i] == mapIndex) {
+                        sprites[role].playerHit = i;
+                        break;
+                    }
+                }
             }
             //jump to next map square, OR in x-direction, OR in y-direction
             if (sideDistX < sideDistY) {
@@ -359,125 +385,126 @@ void loop() {
     //
     //
     for (uint8_t s = 0; s < numSprites; s++) {
+        if (s != role) {// don't draw ourself!
+            // translate sprite position to relative to camera
+            int16_t spriteX = sprites[s].posX - sprites[role].posX;
+            int16_t spriteY = sprites[s].posY - sprites[role].posY;
 
-        // translate sprite position to relative to camera
-        int16_t spriteX = sprite[s].x - player.posX;
-        int16_t spriteY = sprite[s].y - player.posY;
+            //transform sprite with the inverse camera matrix
+            // [ planeX   dirX ] -1                                       [ dirY      -dirX ]
+            // [               ]       =  1/(planeX*dirY-dirX*planeY) *   [                 ]
+            // [ planeY   dirY ]                                          [ -planeY  planeX ]
 
-        //transform sprite with the inverse camera matrix
-        // [ planeX   dirX ] -1                                       [ dirY      -dirX ]
-        // [               ]       =  1/(planeX*dirY-dirX*planeY) *   [                 ]
-        // [ planeY   dirY ]                                          [ -planeY  planeX ]
+            int16_t transformY = (MUL32(-planeY, spriteX) + MUL32(planeX, spriteY)) >> 15;  // Q8
+            transformY = MUL32(transformY, invPlaneLen) >> 14;  // Q8
 
-        int16_t transformY = (MUL32(-planeY, spriteX) + MUL32(planeX, spriteY)) >> 15;  // Q8
-        transformY = MUL32(transformY, invPlaneLen) >> 14;  // Q8
+            if (transformY >= 16) { // cull if sprite is too close or behind
 
-        if (transformY >= 16) { // cull if sprite is too close or behind
+                int16_t transformX = (MUL32(dirY, spriteX) - MUL32(dirX, spriteY)) >> 15;   // Q8
+                transformX = MUL32(transformX, invPlaneLen) >> 14;  // Q8
 
-            int16_t transformX = (MUL32(dirY, spriteX) - MUL32(dirX, spriteY)) >> 15;   // Q8
-            transformX = MUL32(transformX, invPlaneLen) >> 14;  // Q8
+                // int spriteScreenX = int((FBW / 2) * (1.0 + transformX / transformY));
+                int16_t invTransformY = recip(transformY); // [0, 16.0] in Q8
+                int32_t scale32 = FIX16(1.0f, 8) + (MUL32(transformX, invTransformY) >> 8); // Q8
+                int16_t scale = tclamp<int32_t>(scale32, -32768, 32767);  // Q8
+                int16_t spriteScreenX = MUL32(FBW / 2, scale) >> 8;  // [-8192, 8191] in Q0
 
-            // int spriteScreenX = int((FBW / 2) * (1.0 + transformX / transformY));
-            int16_t invTransformY = recip(transformY); // [0, 16.0] in Q8
-            int32_t scale32 = FIX16(1.0f, 8) + (MUL32(transformX, invTransformY) >> 8); // Q8
-            int16_t scale = tclamp<int32_t>(scale32, -32768, 32767);  // Q8
-            int16_t spriteScreenX = MUL32(FBW / 2, scale) >> 8;  // [-8192, 8191] in Q0
+                // calculate width and height of the sprite on screen, using 'transformY' as distance to prevent fisheye
+                int16_t spriteSize = MUL32(FBH, invTransformY) >> 8; // [0, 1023] in Q0
 
-            // calculate width and height of the sprite on screen, using 'transformY' as distance to prevent fisheye
-            int16_t spriteSize = MUL32(FBH, invTransformY) >> 8; // [0, 1023] in Q0
+                uint8_t drawStartX = (uint8_t)tclamp<int16_t>(spriteScreenX - (spriteSize / 2), 0, 255);
+                uint8_t drawEndX = (uint8_t)tclamp<int16_t>(spriteScreenX + (spriteSize / 2), 0, FBW);
 
-            uint8_t drawStartX = (uint8_t)tclamp<int16_t>(spriteScreenX - (spriteSize / 2), 0, 255);
-            uint8_t drawEndX = (uint8_t)tclamp<int16_t>(spriteScreenX + (spriteSize / 2), 0, FBW);
+                if (drawStartX < drawEndX) {    // cull if sprite is off the side
 
-            if (drawStartX < drawEndX) {    // cull if sprite is off the side
+                    uint8_t drawStartY = (uint8_t)tclamp<int16_t>((FBH / 2) - (spriteSize / 2), 0, 255);
+                    uint8_t drawEndY = (uint8_t)tclamp<int16_t>((FBH / 2) + (spriteSize / 2), 0, FBH);
 
-                uint8_t drawStartY = (uint8_t)tclamp<int16_t>((FBH / 2) - (spriteSize / 2), 0, 255);
-                uint8_t drawEndY = (uint8_t)tclamp<int16_t>((FBH / 2) + (spriteSize / 2), 0, FBH);
+                    uint16_t invSpriteSize = recip(spriteSize) - 1;   // ensure <= (65535/spriteSize)
+                    uint16_t texStep = invSpriteSize / (256 / texSize);  // Q8
 
-                uint16_t invSpriteSize = recip(spriteSize) - 1;   // ensure <= (65535/spriteSize)
-                uint16_t texStep = invSpriteSize / (256 / texSize);  // Q8
+                    uint16_t texInitX = (2*drawStartX - 2*spriteScreenX + spriteSize) * (texSize/2);
+                    uint16_t texInitY = (2*drawStartY - FBH + spriteSize) * (texSize/2);
+                    texInitX = MUL32(texInitX, invSpriteSize) >> 8; // Q8
+                    texInitY = MUL32(texInitY, invSpriteSize) >> 8; // Q8
 
-                uint16_t texInitX = (2*drawStartX - 2*spriteScreenX + spriteSize) * (texSize/2);
-                uint16_t texInitY = (2*drawStartY - FBH + spriteSize) * (texSize/2);
-                texInitX = MUL32(texInitX, invSpriteSize) >> 8; // Q8
-                texInitY = MUL32(texInitY, invSpriteSize) >> 8; // Q8
+                    uint16_t texX = texInitX;   // Q8
+                    uint8_t drawStartByte = (((drawStartY >> 1) >> 1) >> 1); //right shift 3 without loop
+                    uint8_t drawEndByte = (((drawEndY >> 1) >> 1) >> 1);  //The byte to end the unrolled loop on. Could be inclusive or exclusive
 
-                uint16_t texX = texInitX;   // Q8
-                uint8_t drawStartByte = (((drawStartY >> 1) >> 1) >> 1); //right shift 3 without loop
-                uint8_t drawEndByte = (((drawEndY >> 1) >> 1) >> 1);  //The byte to end the unrolled loop on. Could be inclusive or exclusive
+                    uint8_t preshift = texInitY >> 8;   //drawData.texYInit.getInteger();
+                    uint8_t accumStart = texInitY & 0xff;   //drawData.texYInit.getFraction();
+                    uint8_t fullStep = texStep >> 8;    //drawData.stepY.getInteger();
+                    uint8_t fracStep = texStep & 0xff;  //drawData.stepY.getFraction();
 
-                uint8_t preshift = texInitY >> 8;   //drawData.texYInit.getInteger();
-                uint8_t accumStart = texInitY & 0xff;   //drawData.texYInit.getFraction();
-                uint8_t fullStep = texStep >> 8;    //drawData.stepY.getInteger();
-                uint8_t fracStep = texStep & 0xff;  //drawData.stepY.getFraction();
+                    for (uint8_t x = drawStartX; x < drawEndX; x++) { //For every strip (x)
 
-                for (uint8_t x = drawStartX; x < drawEndX; x++) { //For every strip (x)
+                        //If the sprite is hidden, skip this line. Lots of calculations bypassed!
+                        if ((uint16_t)transformY < zbuf[x]) {
+                            zbuf[x] = transformY;
 
-                    //If the sprite is hidden, skip this line. Lots of calculations bypassed!
-                    if ((uint16_t)transformY < zbuf[x]) {
-                        zbuf[x] = transformY;
+                            uint8_t tx = texX >> 8; //texX.getInteger();
 
-                        uint8_t tx = texX >> 8; //texX.getInteger();
+                            //texData = readTextureStrip16(spritesheet, fr, tx) >> preshift;
+                            //texMask = readTextureStrip16(spritesheet_Mask, fr, tx) >> preshift;
+                            uint16_t texData = (_texData[tx] | (_texData[tx+16] << 8)) >> preshift;
+                            uint16_t texMask = (_texMask[tx] | (_texMask[tx+16] << 8)) >> preshift;
+                            if (texMask) {
 
-                        //texData = readTextureStrip16(spritesheet, fr, tx) >> preshift;
-                        //texMask = readTextureStrip16(spritesheet_Mask, fr, tx) >> preshift;
-                        uint16_t texData = (_texData[tx] | (_texData[tx+16] << 8)) >> preshift;
-                        uint16_t texMask = (_texMask[tx] | (_texMask[tx+16] << 8)) >> preshift;
-                        if (texMask) {
+                                uint8_t accum = accumStart;
+                                uint8_t thisWallByte = drawStartByte;
+                                uint16_t bofs = thisWallByte * FBW + x;
+                                uint8_t texByte = buf[bofs];
 
-                            uint8_t accum = accumStart;
-                            uint8_t thisWallByte = drawStartByte;
-                            uint16_t bofs = thisWallByte * FBW + x;
-                            uint8_t texByte = buf[bofs];
+                                // first and last bytes are tricky
+                                if (drawStartY & 0x7) {
+                                    uint8_t endFirst = tmin<uint8_t>((drawStartByte + 1) * 8, drawEndY);
+                                    uint8_t bm = SET_MASK[drawStartY & 0x7];
 
-                            // first and last bytes are tricky
-                            if (drawStartY & 0x7) {
-                                uint8_t endFirst = tmin<uint8_t>((drawStartByte + 1) * 8, drawEndY);
-                                uint8_t bm = SET_MASK[drawStartY & 0x7];
+                                    for (uint8_t i = drawStartY; i < endFirst; i++) {
+                                        SPRITEBITUNROLL(bm, ~bm, texByte, texMask, texData, accum, fracStep, fullStep);
+                                        bm <<= 1;
+                                    }
 
-                                for (uint8_t i = drawStartY; i < endFirst; i++) {
-                                    SPRITEBITUNROLL(bm, ~bm, texByte, texMask, texData, accum, fracStep, fullStep);
-                                    bm <<= 1;
+                                    buf[bofs] = texByte;
+                                    // texByte = buf[bofs += FBW];
+                                    // ++thisWallByte;
+                                    bofs = ++thisWallByte * FBW + x;
+                                    texByte = buf[bofs];
                                 }
 
-                                buf[bofs] = texByte;
-                                // texByte = buf[bofs += FBW];
-                                // ++thisWallByte;
-                                bofs = ++thisWallByte * FBW + x;
-                                texByte = buf[bofs];
-                            }
+                                // unrolled loop
+                                for (; thisWallByte < drawEndByte; thisWallByte++) {
+                                    SPRITEBITUNROLL(0b00000001, 0b11111110, texByte, texMask, texData, accum, fracStep, fullStep);
+                                    SPRITEBITUNROLL(0b00000010, 0b11111101, texByte, texMask, texData, accum, fracStep, fullStep);
+                                    SPRITEBITUNROLL(0b00000100, 0b11111011, texByte, texMask, texData, accum, fracStep, fullStep);
+                                    SPRITEBITUNROLL(0b00001000, 0b11110111, texByte, texMask, texData, accum, fracStep, fullStep);
+                                    SPRITEBITUNROLL(0b00010000, 0b11101111, texByte, texMask, texData, accum, fracStep, fullStep);
+                                    SPRITEBITUNROLL(0b00100000, 0b11011111, texByte, texMask, texData, accum, fracStep, fullStep);
+                                    SPRITEBITUNROLL(0b01000000, 0b10111111, texByte, texMask, texData, accum, fracStep, fullStep);
+                                    SPRITEBITUNROLL(0b10000000, 0b01111111, texByte, texMask, texData, accum, fracStep, fullStep);
 
-                            // unrolled loop
-                            for (; thisWallByte < drawEndByte; thisWallByte++) {
-                                SPRITEBITUNROLL(0b00000001, 0b11111110, texByte, texMask, texData, accum, fracStep, fullStep);
-                                SPRITEBITUNROLL(0b00000010, 0b11111101, texByte, texMask, texData, accum, fracStep, fullStep);
-                                SPRITEBITUNROLL(0b00000100, 0b11111011, texByte, texMask, texData, accum, fracStep, fullStep);
-                                SPRITEBITUNROLL(0b00001000, 0b11110111, texByte, texMask, texData, accum, fracStep, fullStep);
-                                SPRITEBITUNROLL(0b00010000, 0b11101111, texByte, texMask, texData, accum, fracStep, fullStep);
-                                SPRITEBITUNROLL(0b00100000, 0b11011111, texByte, texMask, texData, accum, fracStep, fullStep);
-                                SPRITEBITUNROLL(0b01000000, 0b10111111, texByte, texMask, texData, accum, fracStep, fullStep);
-                                SPRITEBITUNROLL(0b10000000, 0b01111111, texByte, texMask, texData, accum, fracStep, fullStep);
-
-                                buf[bofs] = texByte;
-                                texByte = buf[bofs += FBW];
-                            }
-
-                            //Last byte, but only need to do it if we end in the middle of a byte and don't simply span one byte
-                            if ((drawEndY & 0x7) && drawStartByte != drawEndByte) {
-                                uint8_t endStart = thisWallByte * 8;
-                                uint8_t bm = SET_MASK[0];
-
-                                for (uint8_t i = endStart; i < drawEndY; i++) {
-                                    SPRITEBITUNROLL(bm, ~bm, texByte, texMask, texData, accum, fracStep, fullStep);
-                                    bm <<= 1;
+                                    buf[bofs] = texByte;
+                                    texByte = buf[bofs += FBW];
                                 }
 
-                                buf[bofs] = texByte;
+                                //Last byte, but only need to do it if we end in the middle of a byte and don't simply span one byte
+                                if ((drawEndY & 0x7) && drawStartByte != drawEndByte) {
+                                    uint8_t endStart = thisWallByte * 8;
+                                    uint8_t bm = SET_MASK[0];
+
+                                    for (uint8_t i = endStart; i < drawEndY; i++) {
+                                        SPRITEBITUNROLL(bm, ~bm, texByte, texMask, texData, accum, fracStep, fullStep);
+                                        bm <<= 1;
+                                    }
+
+                                    buf[bofs] = texByte;
+                                }
                             }
                         }
-                    }
-                    texX += texStep;
-                }            
+                        texX += texStep;
+                    }            
+                }
             }
         }
     }
@@ -485,6 +512,5 @@ void loop() {
         Sprites::drawPlusMask(laserTaggerX + laserTaggerFlashOffsetX, laserTaggerY + laserTaggerFlashOffsetY, laserTaggerFlashPlusMask, 0);
     }
     Sprites::drawPlusMask(laserTaggerX, laserTaggerY, laserTaggerPlusMask, 0);
-
     arduboy.display();
 }
