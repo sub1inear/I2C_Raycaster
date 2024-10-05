@@ -1,5 +1,10 @@
 #pragma once
+#include <Arduboy2.h>
 #include <stdint.h>
+
+constexpr int FBW = 128;
+constexpr int FBH = 64;
+constexpr int BUF_BYTES = FBW * FBH / 8;
 
 #ifdef __AVR__
 #include <avr\pgmspace.h>
@@ -11,9 +16,26 @@ inline uint16_t pgm_read_word(void const* p) { return *(uint16_t*)p; }
 inline void const* pgm_read_ptr(void const* p) { return *(void const**)p; }
 #endif
 
-const int FBW = 128;
-const int FBH = 64;
-const int BUF_BYTES = FBW * FBH / 8;
+// high/low byte of uint16_t
+#define LO(a) ((uint8_t)(a))
+#define HI(a) ((uint8_t)((uint16_t)(a) >> 8))
+
+#ifdef FPS_DEBUG
+class Arduboy2Ex {
+public:
+    static bool nextFrameMiniDEV() {
+        bool ret = arduboy.nextFrame();
+        if (ret) {
+            if (arduboy.lastFrameDurationMs > arduboy.eachFrameMillis) {
+                arduboy.digitalWriteRGB(RGB_ON, RGB_OFF, RGB_OFF);
+            } else {
+                arduboy.digitalWriteRGB(RGB_OFF, RGB_ON, RGB_OFF);
+            }
+        }
+        return ret;
+    }
+};
+#endif
 
 #ifdef _MSC_VER
 #define FORCEINLINE __forceinline
@@ -33,26 +55,6 @@ FORCEINLINE uint8_t CLZ16(uint16_t a) {
     return r;
 }
 #endif
-
-extern const uint16_t recip_tab[128] PROGMEM;
-
-// for x!=0 returns 0xffff / x
-// for x==0 returns 0xffff
-// max error = 1ULP
-FORCEINLINE uint16_t recip(uint16_t x) {
-    if (x == 0) return 0xffff;
-
-    uint8_t n = CLZ16(x);
-    x <<= n;                                    // normalize, so MSB is 1
-    uint16_t r = pgm_read_word(&recip_tab[(x >> 8) - 0x80]);    // r = 0x7fffff / x, where x = 8 MSBs
-    r >>= 15 - n;                               // undo normalize
-    return r;
-}
-
-template<class T> FORCEINLINE T tmin(T a, T b) { return a < b ? a : b; }
-template<class T> FORCEINLINE T tmax(T a, T b) { return a < b ? b : a; }
-template<class T> FORCEINLINE T tclamp(T x, T a, T b) { return tmin(tmax(x, a), b); }
-
 
 // convert float to signed 16-bit fixed-point, with q fraction bits
 #define FIX16(x, q) ((int16_t)((float)(x) * (1UL << (q)) + ((x) < 0.0f ? -0.5f : 0.5f)))
@@ -149,5 +151,29 @@ FORCEINLINE void SPRITEBITUNROLL(uint8_t bm, uint8_t nbm,
     if (fullStep) { texMask >>= fullStep; texData >>= fullStep; }
 }
 #endif
+
+extern const uint16_t recip_tab[128] PROGMEM;
+
+// for x!=0 returns 0xffff / x
+// for x==0 returns 0xffff
+// max error = 1ULP
+FORCEINLINE uint16_t recip(uint16_t x) {
+    if (x == 0) return 0xffff;
+
+    uint8_t n = CLZ16(x);
+    x <<= n;                                    // normalize, so MSB is 1
+    uint16_t r = pgm_read_word(&recip_tab[(x >> 8) - 0x80]);    // r = 0x7fffff / x, where x = 8 MSBs
+    r >>= 15 - n;                               // undo normalize
+    return r;
+}
+
+template<class T> FORCEINLINE T tmin(T a, T b) { return a < b ? a : b; }
+template<class T> FORCEINLINE T tmax(T a, T b) { return a < b ? b : a; }
+template<class T> FORCEINLINE T tclamp(T x, T a, T b) { return tmin(tmax(x, a), b); }
+
+extern const uint16_t PATTERNS[4];
+extern const uint8_t SET_MASK[8];
+
+
 void sincospi(uint16_t ux, int16_t* ps, int16_t* pc);
 void draw_vline(uint8_t x, int16_t y0, int16_t y1, uint16_t pat);

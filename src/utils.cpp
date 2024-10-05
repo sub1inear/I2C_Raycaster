@@ -1,5 +1,7 @@
 #include "utils.h"
 
+extern Arduboy2 arduboy;
+
 const uint16_t recip_tab[128] PROGMEM = {
     0xffff, 0xfe03, 0xfc0f, 0xfa23, 0xf83e, 0xf660, 0xf489, 0xf2b9,
     0xf0f0, 0xef2e, 0xed73, 0xebbd, 0xea0e, 0xe865, 0xe6c2, 0xe525,
@@ -59,4 +61,73 @@ void sincospi(uint16_t ux, int16_t* ps, int16_t* pc) {
     }
     *ps = s;
     *pc = c;
+}
+
+
+// line rendering data
+
+const uint8_t SET_MASK[8] = {
+    0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80
+};
+
+const uint8_t YMASK0[8] = {
+    0xff, 0xfe, 0xfc, 0xf8, 0xf0, 0xe0, 0xc0, 0x80
+};
+const uint8_t YMASK1[8] = {
+    0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff
+};
+
+const uint16_t PATTERNS[4] = {
+//  0x0000,
+    0xaa00,
+    0xaa55,
+    0xff55,
+    0xffff,
+};
+
+void draw_vline(uint8_t x, int16_t y0, int16_t y1, uint16_t pat) {
+    if (y0 > y1) return;
+    if (y1 < 0) return;
+    if (y0 >= FBH) return;
+    if (x >= FBW) return;
+
+    uint8_t ty0 = (uint8_t)tmax<int16_t>(y0, 0);
+    uint8_t ty1 = (uint8_t)tmin<int16_t>(y1, FBH - 1);
+
+    uint8_t t0 = ty0 & 0xf8;
+    uint8_t t1 = ty1 & 0xf8;
+    uint8_t m0 = YMASK0[ty0 & 0x7];
+    uint8_t m1 = YMASK1[ty1 & 0x7];
+
+    uint8_t pattern = (x & 0x1) ? uint8_t(pat) : uint8_t(pat >> 8);
+
+    uint8_t* p = &arduboy.sBuffer[t0 * (FBW / 8) + x];
+
+    if (t0 == t1) {
+        uint8_t m = m0 & m1;
+        uint8_t tp = *p;
+        tp |= (pattern & m);
+        tp &= (pattern | ~m);
+        *p = tp;
+        return;
+    }
+    {
+        uint8_t m = m0;
+        uint8_t tp = *p;
+        tp |= (pattern & m);
+        tp &= (pattern | ~m);
+        *p = tp;
+        p += FBW;
+    }
+    for (int8_t t = t1 - t0 - 8; t > 0; t -= 8) {
+        *p = pattern;
+        p += FBW;
+    }
+    {
+        uint8_t m = m1;
+        uint8_t tp = *p;
+        tp |= (pattern & m);
+        tp &= (pattern | ~m);
+        *p = tp;
+    }
 }

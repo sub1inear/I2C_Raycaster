@@ -7,12 +7,6 @@
 const uint8_t mapWidth = 24;
 const uint8_t mapHeight = 24;
 
-constexpr int16_t targetStartX = FIX16(19.0f, 8);
-constexpr int16_t targetStartY = FIX16(7.0f, 8);
-
-constexpr int16_t controllerStartX = FIX16(6.0f, 8);
-constexpr int16_t controllerStartY = FIX16(17.0f, 8);
-
 const uint8_t worldMap[mapWidth][mapHeight] PROGMEM = {
     {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
