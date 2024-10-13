@@ -1,14 +1,7 @@
 #pragma once
 #include <Arduboy2.h>
-#include <stdint.h>
 
-constexpr int FBW = 128;
-constexpr int FBH = 64;
-constexpr int BUF_BYTES = FBW * FBH / 8;
-
-#ifdef __AVR__
-#include <avr\pgmspace.h>
-#else
+#ifndef __AVR__
 #define PSTR(str_) str_
 #define PROGMEM
 inline uint8_t pgm_read_byte(void const* p) { return *(uint8_t*)p; }
@@ -20,22 +13,8 @@ inline void const* pgm_read_ptr(void const* p) { return *(void const**)p; }
 #define LO(a) ((uint8_t)(a))
 #define HI(a) ((uint8_t)((uint16_t)(a) >> 8))
 
-#ifdef FPS_DEBUG
-class Arduboy2Ex {
-public:
-    static bool nextFrameMiniDEV() {
-        bool ret = arduboy.nextFrame();
-        if (ret) {
-            if (arduboy.lastFrameDurationMs > arduboy.eachFrameMillis) {
-                arduboy.digitalWriteRGB(RGB_ON, RGB_OFF, RGB_OFF);
-            } else {
-                arduboy.digitalWriteRGB(RGB_OFF, RGB_ON, RGB_OFF);
-            }
-        }
-        return ret;
-    }
-};
-#endif
+// perform a 1-D lookup into worldMap[]
+#define MAP_LOOKUP(i) (pgm_read_byte((uint8_t *)worldMap + i))
 
 #ifdef _MSC_VER
 #define FORCEINLINE __forceinline
@@ -171,9 +150,5 @@ template<class T> FORCEINLINE T tmin(T a, T b) { return a < b ? a : b; }
 template<class T> FORCEINLINE T tmax(T a, T b) { return a < b ? b : a; }
 template<class T> FORCEINLINE T tclamp(T x, T a, T b) { return tmin(tmax(x, a), b); }
 
-extern const uint16_t PATTERNS[4];
-extern const uint8_t SET_MASK[8];
-
-
+void display_fill_screen(uint8_t color);
 void sincospi(uint16_t ux, int16_t* ps, int16_t* pc);
-void draw_vline(uint8_t x, int16_t y0, int16_t y1, uint16_t pat);
