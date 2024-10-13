@@ -1,5 +1,4 @@
-#pragma once
-#include "utils.h"
+#include <Arduboy2.h>
 
 constexpr uint8_t laserTaggerWidth = 50;
 constexpr uint8_t laserTaggerHeight = 32;

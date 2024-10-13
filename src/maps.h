@@ -1,12 +1,9 @@
 #pragma once
-#include "utils.h"
+#include <stdint.h>
 
-const Point startPos[I2C_MAX_PLAYERS] PROGMEM = {
-    { FIX16(19.0f, 8), FIX16(7.0f, 8) },
-    { FIX16(6.0f, 8), FIX16(17.0f, 8) },
-    { FIX16(6.0f, 8), FIX16(8.0f, 8) },
-    { FIX16(16.0f, 8), FIX16(17.0f, 8) }
-};
+// perform a 1-D lookup into worldMap[]
+#define MAP_LOOKUP(i) (pgm_read_byte((uint8_t *)worldMap + i))
+
 const uint8_t mapWidth = 24;
 const uint8_t mapHeight = 24;
 

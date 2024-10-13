@@ -1,32 +1,6 @@
 #include "utils.h"
 
-void display_fill_screen(uint8_t color) {
-    // modified from Arduboy2 lib
-    uint16_t count;
-    
-    uint8_t *ptr = Arduboy2::sBuffer;
-
-    asm volatile (
-        "   ldi   %A[count], %[len_lsb]               \n\t" //for (len = WIDTH * HEIGHT / 8)
-        "   ldi   %B[count], %[len_msb]               \n\t"
-        "1: ld    __tmp_reg__, %a[ptr]      ;2        \n\t" //tmp = *(image)
-        "   out   %[spdr], __tmp_reg__      ;1        \n\t" //SPDR = tmp
-        "   lpm                             ;3        \n\t" //9 cycle delay
-        "   lpm                             ;3        \n\t" 
-        "   lpm                             ;3        \n\t" 
-        "2: sbiw  %A[count], 1              ;2        \n\t" //len --
-        "   st    %a[ptr]+, %[color]        ;2        \n\t" //*(image++) = color
-        "   brne  1b                        ;1/2 :18  \n\t" //len > 0
-        "   in    __tmp_reg__, %[spsr]                \n\t" //read SPSR to clear SPIF
-        : [ptr]     "+&e" (ptr),
-          [count]   "=&w" (count)
-        : [spdr]    "I"   (_SFR_IO_ADDR(SPDR)),
-          [spsr]    "I"   (_SFR_IO_ADDR(SPSR)),
-          [len_msb] "M"   (WIDTH * (HEIGHT / 8) >> 8),   // 8: pixels per byte
-          [len_lsb] "M"   (WIDTH * (HEIGHT / 8) & 0xFF),
-          [color]   "r"   (color)
-    );
-}
+extern Arduboy2 arduboy;
 
 const uint16_t recip_tab[128] PROGMEM = {
     0xffff, 0xfe03, 0xfc0f, 0xfa23, 0xf83e, 0xf660, 0xf489, 0xf2b9,
@@ -87,4 +61,73 @@ void sincospi(uint16_t ux, int16_t* ps, int16_t* pc) {
     }
     *ps = s;
     *pc = c;
+}
+
+
+// line rendering data
+
+const uint8_t SET_MASK[8] = {
+    0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80
+};
+
+const uint8_t YMASK0[8] = {
+    0xff, 0xfe, 0xfc, 0xf8, 0xf0, 0xe0, 0xc0, 0x80
+};
+const uint8_t YMASK1[8] = {
+    0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff
+};
+
+const uint16_t PATTERNS[4] = {
+//  0x0000,
+    0xaa00,
+    0xaa55,
+    0xff55,
+    0xffff,
+};
+
+void draw_vline(uint8_t x, int16_t y0, int16_t y1, uint16_t pat) {
+    if (y0 > y1) return;
+    if (y1 < 0) return;
+    if (y0 >= FBH) return;
+    if (x >= FBW) return;
+
+    uint8_t ty0 = (uint8_t)tmax<int16_t>(y0, 0);
+    uint8_t ty1 = (uint8_t)tmin<int16_t>(y1, FBH - 1);
+
+    uint8_t t0 = ty0 & 0xf8;
+    uint8_t t1 = ty1 & 0xf8;
+    uint8_t m0 = YMASK0[ty0 & 0x7];
+    uint8_t m1 = YMASK1[ty1 & 0x7];
+
+    uint8_t pattern = (x & 0x1) ? uint8_t(pat) : uint8_t(pat >> 8);
+
+    uint8_t* p = &arduboy.sBuffer[t0 * (FBW / 8) + x];
+
+    if (t0 == t1) {
+        uint8_t m = m0 & m1;
+        uint8_t tp = *p;
+        tp |= (pattern & m);
+        tp &= (pattern | ~m);
+        *p = tp;
+        return;
+    }
+    {
+        uint8_t m = m0;
+        uint8_t tp = *p;
+        tp |= (pattern & m);
+        tp &= (pattern | ~m);
+        *p = tp;
+        p += FBW;
+    }
+    for (int8_t t = t1 - t0 - 8; t > 0; t -= 8) {
+        *p = pattern;
+        p += FBW;
+    }
+    {
+        uint8_t m = m1;
+        uint8_t tp = *p;
+        tp |= (pattern & m);
+        tp &= (pattern | ~m);
+        *p = tp;
+    }
 }
