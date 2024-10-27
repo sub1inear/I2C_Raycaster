@@ -12,13 +12,24 @@
 #include "images.h"
 #include "multiplayer.h"
 
+
+// #define FPS_DEBUG
+#define AUTO_START false
+
 struct sprite_t {
     int16_t posX;  // Q8
     int16_t posY;  // Q8
     char name[ARDUBOY_UNIT_NAME_BUFFER_SIZE];
     uint8_t otherPlayerHit;
+    uint8_t timeout;
     uint8_t id;
 };
+
+enum State {
+    LOBBY,
+    GAME
+};
+
 
 constexpr int FBW = 128;
 constexpr int FBH = 64;
@@ -32,6 +43,8 @@ constexpr int16_t friction = FIX16(0.9f, 8);    // Q8
 
 extern Arduboy2Base arduboy;
 extern Font3x5 font3x5;
+
+extern State state;
 
 extern uint8_t id;
 

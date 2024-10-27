@@ -219,7 +219,7 @@ void render() {
     //
     //
     for (uint8_t s = 0; s < I2C_MAX_PLAYERS; s++) {
-        if (s != id) { // don't draw ourself!
+        if (sprites[s].timeout) { // only draws sprites who have joined, 0 for sprites[id]
             // translate sprite position to relative to camera
             int16_t spriteX = sprites[s].posX - sprites[id].posX;
             int16_t spriteY = sprites[s].posY - sprites[id].posY;

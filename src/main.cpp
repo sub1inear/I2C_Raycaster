@@ -1,8 +1,6 @@
 #include "globals.h"
 #include "utils.h"
 
-#define FPS_DEBUG
-
 #ifdef FPS_DEBUG
 class Arduboy2Ex {
 public:
@@ -23,8 +21,9 @@ public:
 void setup() {
     arduboy.boot();
     arduboy.safeMode();
+    arduboy.waitNoButtons();
 
-    setup_multiplayer();
+    setup_lobby();
 
     reset_player();
 
@@ -42,13 +41,23 @@ void loop() {
 #endif
 
     arduboy.pollButtons();
+    
+    bool hit = false;
+    uint8_t numPlayers = run_timeout();
 
-    move_player();
-    bool hit = handle_player_hit();
+    switch (state) {
+    case LOBBY:
+        run_lobby(numPlayers);
+        break;
+    case GAME:
+        move_player();
+        hit = handle_player_hit();
 
-    update_multiplayer();
+        update_multiplayer();
 
-    render();
+        render();
+        break;
+    }
 
     display_fill_screen(hit ? 0xff : 0x00);
 }

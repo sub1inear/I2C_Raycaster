@@ -3,11 +3,10 @@
 #include "utils.h"
 
 void reset_player() {
-    health = 5;
-    orientation = UFIX16(1.5f, 15);
+    health = 20;
     sprites[id].posX = pgm_read_word(&startPos[id].x);
     sprites[id].posY = pgm_read_word(&startPos[id].y);
-    
+    orientation = pgm_read_word(&startPos[id].orientation);    
     sincospi(orientation, &dirX, &dirY);
 }
 

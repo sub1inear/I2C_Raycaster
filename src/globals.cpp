@@ -3,6 +3,8 @@
 Arduboy2Base arduboy;
 Font3x5 font3x5;
 
+State state;
+
 // private player data
 
 uint8_t id;

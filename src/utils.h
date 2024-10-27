@@ -16,6 +16,9 @@ inline void const* pgm_read_ptr(void const* p) { return *(void const**)p; }
 // perform a 1-D lookup into worldMap[]
 #define MAP_LOOKUP(i) (pgm_read_byte((uint8_t *)worldMap + i))
 
+#define _STR(str) #str
+#define STR(str) _STR(str)
+
 #ifdef _MSC_VER
 #define FORCEINLINE __forceinline
 #else
