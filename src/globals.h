@@ -16,15 +16,6 @@
 // #define FPS_DEBUG
 #define AUTO_START false
 
-struct sprite_t {
-    int16_t posX;  // Q8
-    int16_t posY;  // Q8
-    char name[ARDUBOY_UNIT_NAME_BUFFER_SIZE];
-    uint8_t otherPlayerHit;
-    uint8_t timeout;
-    uint8_t id;
-};
-
 enum State {
     LOBBY,
     GAME
@@ -61,6 +52,8 @@ extern int16_t momX;   // Q16
 extern int16_t momY;   // Q16
 
 extern uint16_t zbuf[FBW]; // Q8
+
+extern uint8_t doors[numDoors];
 
 // public player data / other player data
 extern volatile sprite_t sprites[I2C_MAX_PLAYERS];

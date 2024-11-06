@@ -48,8 +48,11 @@ void move_player() {
     uint8_t x1 = (sprites[id].posX +  0) >> 8;
     uint8_t y1 = (sprites[id].posY + dY) >> 8;
 
-    if (MAP_LOOKUP(x0 * mapHeight + y0) == 0) sprites[id].posX += dX;
-    if (MAP_LOOKUP(x1 * mapHeight + y1) == 0) sprites[id].posY += dY;
+    uint8_t t1 = MAP_LOOKUP(x0 * mapHeight + y0);
+    uint8_t t2 = MAP_LOOKUP(x1 * mapHeight + y1);
+    
+    if (t1 == 0 || (t1 >= secretDoor && doors[t1 >> 4])) sprites[id].posX += dX;
+    if (t2 == 0 || (t2 >= secretDoor && doors[t2 >> 4])) sprites[id].posY += dY;
 
     // apply friction
     momX = MUL32(momX, friction) >> 8;

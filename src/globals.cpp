@@ -23,6 +23,8 @@ int16_t momY;   // Q16
 
 uint16_t zbuf[FBW]; // Q8
 
+uint8_t doors[numDoors];
+
 // public player data / other player data
 volatile sprite_t sprites[I2C_MAX_PLAYERS];
 

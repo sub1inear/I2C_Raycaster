@@ -129,7 +129,8 @@ void render() {
         //perform DDA
         int8_t side = 0;    //was a NS or a EW wall hit?
         uint16_t mapIndex = mapX * mapHeight + mapY;  // [mapX][mapY] as 1-D index
-                
+        
+        uint8_t t;
         if (x > 60 && x < 68 && arduboy.justPressed(A_BUTTON)) {
             uint16_t otherPlayerMapIndexes[I2C_MAX_PLAYERS];
             for (uint8_t i = 0; i < I2C_MAX_PLAYERS; i++) {
@@ -155,8 +156,13 @@ void render() {
                     mapIndex += stepY;
                     side = 1;
                 }
-
-            } while (MAP_LOOKUP(mapIndex) == 0);  //stop when ray has hit a wall
+                t = MAP_LOOKUP(mapIndex);
+                
+                if (t >= secretDoor) {
+                    uint8_t doorsIndex = t >> 4;
+                    doors[doorsIndex] = !doors[doorsIndex];
+                }
+            } while (t == 0);
         } else {
             do {
                 //jump to next map square, OR in x-direction, OR in y-direction
@@ -171,12 +177,12 @@ void render() {
                     mapIndex += stepY;
                     side = 1;
                 }
-
-            } while (MAP_LOOKUP(mapIndex) == 0);  //stop when ray has hit a wall
+                t = MAP_LOOKUP(mapIndex);
+            } while (t == 0 || (t >= secretDoor && doors[t >> 4]));
         }
-
-        uint8_t t = MAP_LOOKUP(mapIndex);
-
+        if (t >= secretDoor) {
+            t = 1;
+        }
         //Calculate distance projected on camera direction (oblique distance will give fisheye effect!)
         uint16_t perpWallDist = (side == 0) ? sideDistX - deltaDistX : sideDistY - deltaDistY;  // Q7
 

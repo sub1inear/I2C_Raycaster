@@ -23,6 +23,8 @@ void setup() {
     arduboy.safeMode();
     arduboy.waitNoButtons();
 
+    EEPROM.begin(); // remove warning
+
     setup_lobby();
 
     reset_player();
