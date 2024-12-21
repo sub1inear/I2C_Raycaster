@@ -40,6 +40,21 @@ FORCEINLINE uint8_t CLZ16(uint16_t a) {
 }
 #endif
 
+#ifdef __AVR__
+FORCEINLINE uint8_t RSFOUR(uint8_t x) {
+    asm volatile (
+        "swap %[x]\n"
+        "andi %[x], 15\n"
+    : [x] "+r" (x)
+    );
+    return x;
+}
+#else
+FORCEINLINE uint8_t RSFOUR(uint8_t x) {
+    return x >> 4;
+}
+#endif
+
 // convert float to signed 16-bit fixed-point, with q fraction bits
 #define FIX16(x, q) ((int16_t)((float)(x) * (1UL << (q)) + ((x) < 0.0f ? -0.5f : 0.5f)))
 

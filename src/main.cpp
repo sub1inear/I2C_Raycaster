@@ -43,6 +43,7 @@ void loop() {
     switch (state) {
     case SINGLEPLAYER_INIT:
         reset_player();
+        state = GAME;
     case GAME:
         move_player();
         if (singleplayer) {

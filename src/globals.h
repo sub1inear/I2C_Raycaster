@@ -71,6 +71,8 @@ constexpr uint8_t nameTempBuffer = 0;
 
 constexpr uint8_t nullId = 255;
 
+constexpr uint8_t numItems = 10;
+
 extern Arduboy2Base arduboy;
 extern Font3x5 font3x5;
 

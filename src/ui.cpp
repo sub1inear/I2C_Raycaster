@@ -12,7 +12,7 @@ void update_title_screen() {
     menuIdx = tclamp(menuIdx, (int8_t)0, (int8_t)3);
     if (arduboy.justReleased(A_BUTTON)) {
         state = pgm_read_byte(&onClick[menuIdx]);
-        singleplayer = state == 0;
+        singleplayer = state == SINGLEPLAYER_INIT;
     }
 }
 
