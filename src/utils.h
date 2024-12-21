@@ -19,6 +19,8 @@ inline void const* pgm_read_ptr(void const* p) { return *(void const**)p; }
 #define _STR(str) #str
 #define STR(str) _STR(str)
 
+#define CENTER_STR(str) WIDTH / 2 - ((sizeof(str) - 1) * (FONT3X5_WIDTH + 1) - 1) / 2
+#define CENTER_WIDTH(width) WIDTH / 2 - width / 2
 #ifdef _MSC_VER
 #define FORCEINLINE __forceinline
 #else

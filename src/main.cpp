@@ -20,15 +20,8 @@ public:
 
 void setup() {
     arduboy.boot();
-    arduboy.safeMode();
     arduboy.waitNoButtons();
-
-    EEPROM.begin(); // remove warning
-
-    setup_lobby();
-
-    reset_player();
-
+    arduboy.readUnitName((char *)sprites[nameTempBuffer].name);
 }
 
 void loop() {
@@ -48,16 +41,43 @@ void loop() {
     uint8_t numPlayers = run_timeout();
 
     switch (state) {
-    case LOBBY:
-        run_lobby(numPlayers);
-        break;
+    case SINGLEPLAYER_INIT:
+        reset_player();
     case GAME:
         move_player();
-        hit = handle_player_hit();
-
-        update_multiplayer();
+        if (singleplayer) {
+            
+        } else {
+            hit = handle_player_hit();
+            update_multiplayer();
+        }
 
         render();
+        break;
+    case TITLE:
+        update_title_screen();
+        draw_title_screen();
+        break;
+    case CREDITS_INIT:
+        state = CREDITS;
+        init_credits_screen();
+    case CREDITS:
+        update_credits_screen();
+        draw_credits_screen();
+        break;
+    case SETTINGS_INIT:
+        init_settings_screen();
+        state = SETTINGS;
+    case SETTINGS:
+        update_settings_screen();
+        draw_settings_screen();
+        break;
+    case LOBBY_INIT:
+        state = LOBBY;
+        setup_lobby();
+        break;
+    case LOBBY:
+        run_lobby(numPlayers);
         break;
     }
 

@@ -3,18 +3,18 @@
 #include "utils.h"
 // line rendering data
 
-const uint8_t SET_MASK[8] = {
+const uint8_t SET_MASK[8] PROGMEM = {
     0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80
 };
 
-const uint8_t YMASK0[8] = {
+const uint8_t YMASK0[8] PROGMEM = {
     0xff, 0xfe, 0xfc, 0xf8, 0xf0, 0xe0, 0xc0, 0x80
 };
-const uint8_t YMASK1[8] = {
+const uint8_t YMASK1[8] PROGMEM = {
     0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff
 };
 
-const uint16_t PATTERNS[4] = {
+const uint16_t PATTERNS[4] PROGMEM = {
 //  0x0000,
     0xaa00,
     0xaa55,
@@ -33,8 +33,8 @@ void draw_vline(uint8_t x, int16_t y0, int16_t y1, uint16_t pat) {
 
     uint8_t t0 = ty0 & 0xf8;
     uint8_t t1 = ty1 & 0xf8;
-    uint8_t m0 = YMASK0[ty0 & 0x7];
-    uint8_t m1 = YMASK1[ty1 & 0x7];
+    uint8_t m0 = pgm_read_byte(&YMASK0[ty0 & 0x7]);
+    uint8_t m1 = pgm_read_byte(&YMASK1[ty1 & 0x7]);
 
     uint8_t pattern = (x & 0x1) ? uint8_t(pat) : uint8_t(pat >> 8);
 
@@ -82,8 +82,8 @@ void render() {
     int8_t mapX = sprites[id].posX >> 8;
     int8_t mapY = sprites[id].posY >> 8;
 
-    // clear otherPlayerHit (0 is id)
-    sprites[id].otherPlayerHit = 0xff;
+    // clear otherPlayerHit
+    sprites[id].otherPlayerHit = nullId;
 
     for (uint8_t x = 0; x < FBW; x++) {
 
@@ -211,7 +211,7 @@ void render() {
         uint8_t c = t - 1;  //wall color = 0..3
         c = (c + side) % 4; //give x and y sides different brightness
         
-        draw_vline(x, drawStart, drawEnd, PATTERNS[c]);
+        draw_vline(x, drawStart, drawEnd, pgm_read_word(&PATTERNS[c]));
     }
 
     //
@@ -290,8 +290,8 @@ void render() {
 
                             //texData = readTextureStrip16(spritesheet, fr, tx) >> preshift;
                             //texMask = readTextureStrip16(spritesheet_Mask, fr, tx) >> preshift;
-                            uint16_t texData = (_texData[tx] | (_texData[tx+16] << 8)) >> preshift;
-                            uint16_t texMask = (_texMask[tx] | (_texMask[tx+16] << 8)) >> preshift;
+                            uint16_t texData = (pgm_read_byte(&_texData[tx]) | (pgm_read_byte(&_texData[tx+16]) << 8)) >> preshift;
+                            uint16_t texMask = (pgm_read_byte(&_texMask[tx]) | (pgm_read_byte(&_texMask[tx+16]) << 8)) >> preshift;
                             if (texMask) {
 
                                 uint8_t accum = accumStart;
@@ -302,7 +302,7 @@ void render() {
                                 // first and last bytes are tricky
                                 if (drawStartY & 0x7) {
                                     uint8_t endFirst = tmin<uint8_t>((drawStartByte + 1) * 8, drawEndY);
-                                    uint8_t bm = SET_MASK[drawStartY & 0x7];
+                                    uint8_t bm = pgm_read_byte(&SET_MASK[drawStartY & 0x7]);
 
                                     for (uint8_t i = drawStartY; i < endFirst; i++) {
                                         SPRITEBITUNROLL(bm, ~bm, texByte, texMask, texData, accum, fracStep, fullStep);
@@ -352,7 +352,7 @@ void render() {
         }
     }
     if (arduboy.justPressed(A_BUTTON)) {
-        Sprites::drawPlusMask(laserTaggerX + laserTaggerFlashOffsetX, laserTaggerY+ laserTaggerFlashOffsetY, laserTaggerFlashPlusMask, 0);
+        Sprites::drawPlusMask(laserTaggerX + laserTaggerFlashOffsetX, laserTaggerY + laserTaggerFlashOffsetY, laserTaggerFlashPlusMask, 0);
     }
     Sprites::drawPlusMask(laserTaggerX, laserTaggerY, laserTaggerPlusMask, 0);
 }

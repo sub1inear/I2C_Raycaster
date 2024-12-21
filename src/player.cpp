@@ -2,8 +2,16 @@
 #include "globals.h"
 #include "utils.h"
 
+
+const startpos_t startPos[I2C_MAX_PLAYERS] PROGMEM = {
+    { FIX16(62.5f, 8), FIX16(62.5f, 8), UFIX16(1.25f, 15)},
+    { FIX16(1.5f, 8), FIX16(62.5f, 8), UFIX16(0.75f, 15) },
+    { FIX16(1.5f, 8), FIX16(1.5f, 8), UFIX16(0.25f, 15) },
+    { FIX16(62.5f, 8), FIX16(1.5f, 8), UFIX16(1.75f, 15) }
+};
+
 void reset_player() {
-    health = 20;
+    health = maxHealth;
     sprites[id].posX = pgm_read_word(&startPos[id].x);
     sprites[id].posY = pgm_read_word(&startPos[id].y);
     orientation = pgm_read_word(&startPos[id].orientation);    
