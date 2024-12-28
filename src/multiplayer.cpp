@@ -18,7 +18,7 @@ void handshakeOnRequest() {
 void handshakeOnReceive() {
     uint8_t *buffer = I2C::getBuffer();
     if (buffer[0] == nullId) {
-        state = GAME;
+        state = GAME_INIT;
         I2C::onReceive(onReceive);
     } else {
         sprites[buffer[0]].timeout = 1;
@@ -48,7 +48,6 @@ void setup_lobby() {
             arduboy.readUnitName((char *)sprites[id].name);
             I2C::onReceive(handshakeOnReceive);
             I2C::onRequest(handshakeOnRequest);
-            reset_player();
             return;
         case TW_SUCCESS:
             id--;
@@ -80,7 +79,7 @@ void run_lobby(uint8_t numPlayers) {
     if (arduboy.pressed(A_BUTTON)) {
         uint8_t message = nullId;
         I2C::write(0x00, &message, true);
-        state = GAME;
+        state = GAME_INIT;
         I2C::onReceive(onReceive);
     }
 }

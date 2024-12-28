@@ -7,13 +7,17 @@
 #include <ArduboyI2C.h>
 #include "Font3x5.h"
 #include "player.h"
+#include "sprite.h"
 #include "render.h"
 #include "multiplayer.h"
+#include "ai.h"
 #include "ui.h"
 #include "utils.h"
 
 // #define FPS_DEBUG
 #define AUTO_START false
+
+using uint24_t = __uint24;
 
 enum State {
     TITLE,
@@ -23,7 +27,7 @@ enum State {
     CREDITS,
     LOBBY_INIT,
     LOBBY,
-    SINGLEPLAYER_INIT,
+    GAME_INIT,
     GAME
 };
 
@@ -60,6 +64,7 @@ constexpr int8_t laserTaggerFlashOffsetX = 0;
 constexpr int8_t laserTaggerFlashOffsetY = -5;
 
 constexpr uint8_t texSize = 16;    // should be even
+constexpr uint8_t texBytes = texSize * texSize / 8;
 
 constexpr uint8_t titleImageWidth = 72;
 constexpr uint8_t titleImageHeight = 47;
@@ -72,6 +77,8 @@ constexpr uint8_t nameTempBuffer = 0;
 constexpr uint8_t nullId = 255;
 
 constexpr uint8_t numItems = 10;
+
+constexpr uint8_t singleplayerId = 0;
 
 extern Arduboy2Base arduboy;
 extern Font3x5 font3x5;
@@ -113,3 +120,5 @@ extern const uint8_t PROGMEM _texData[];
 extern const uint8_t PROGMEM _texMask[];
 extern const uint8_t PROGMEM titleImage[];
 extern const uint8_t PROGMEM menuImage[];
+
+extern const startpos_t startPos[I2C_MAX_PLAYERS] PROGMEM;

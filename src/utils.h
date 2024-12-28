@@ -40,21 +40,6 @@ FORCEINLINE uint8_t CLZ16(uint16_t a) {
 }
 #endif
 
-#ifdef __AVR__
-FORCEINLINE uint8_t RSFOUR(uint8_t x) {
-    asm volatile (
-        "swap %[x]\n"
-        "andi %[x], 15\n"
-    : [x] "+r" (x)
-    );
-    return x;
-}
-#else
-FORCEINLINE uint8_t RSFOUR(uint8_t x) {
-    return x >> 4;
-}
-#endif
-
 // convert float to signed 16-bit fixed-point, with q fraction bits
 #define FIX16(x, q) ((int16_t)((float)(x) * (1UL << (q)) + ((x) < 0.0f ? -0.5f : 0.5f)))
 
@@ -169,6 +154,7 @@ FORCEINLINE uint16_t recip(uint16_t x) {
 template<class T> FORCEINLINE T tmin(T a, T b) { return a < b ? a : b; }
 template<class T> FORCEINLINE T tmax(T a, T b) { return a < b ? b : a; }
 template<class T> FORCEINLINE T tclamp(T x, T a, T b) { return tmin(tmax(x, a), b); }
+template<class T> FORCEINLINE T tsign(T a) { return a < 0 ? -1 : a > 0 ? 1 : 0; }
 
 void display_fill_screen(uint8_t color);
 void sincospi(uint16_t ux, int16_t* ps, int16_t* pc);

@@ -38,21 +38,23 @@ void loop() {
     arduboy.pollButtons();
     
     bool hit = false;
-    uint8_t numPlayers = run_timeout();
+    uint8_t numPlayers;
+    if (!singleplayer)
+        numPlayers = run_timeout();
 
     switch (state) {
-    case SINGLEPLAYER_INIT:
+    case GAME_INIT:
         reset_player();
+        if (singleplayer)
+            reset_ais();
         state = GAME;
     case GAME:
         move_player();
-        if (singleplayer) {
-            
-        } else {
-            hit = handle_player_hit();
+        if (singleplayer)
+            update_ais();
+        else
             update_multiplayer();
-        }
-
+        hit = handle_player_hit();
         render();
         break;
     case TITLE:

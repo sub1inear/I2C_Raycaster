@@ -2,14 +2,6 @@
 #include "globals.h"
 #include "utils.h"
 
-
-const startpos_t startPos[I2C_MAX_PLAYERS] PROGMEM = {
-    { FIX16(62.5f, 8), FIX16(62.5f, 8), UFIX16(1.25f, 15)},
-    { FIX16(1.5f, 8), FIX16(62.5f, 8), UFIX16(0.75f, 15) },
-    { FIX16(1.5f, 8), FIX16(1.5f, 8), UFIX16(0.25f, 15) },
-    { FIX16(62.5f, 8), FIX16(1.5f, 8), UFIX16(1.75f, 15) }
-};
-
 void reset_player() {
     health = maxHealth;
     sprites[id].posX = pgm_read_word(&startPos[id].x);
@@ -50,17 +42,7 @@ void move_player() {
     int8_t dX = (momX + 128) >> 8;  // Q8
     int8_t dY = (momY + 128) >> 8;  // Q8
 
-    // move, if not blocked by a wall
-    uint8_t x0 = (sprites[id].posX + dX) >> 8;
-    uint8_t y0 = (sprites[id].posY +  0) >> 8;
-    uint8_t x1 = (sprites[id].posX +  0) >> 8;
-    uint8_t y1 = (sprites[id].posY + dY) >> 8;
-
-    uint8_t t1 = MAP_LOOKUP(x0 * mapHeight + y0);
-    uint8_t t2 = MAP_LOOKUP(x1 * mapHeight + y1);
-    
-    if (t1 == 0 || (t1 >= secretDoor && doors[t1 >> 4])) sprites[id].posX += dX;
-    if (t2 == 0 || (t2 >= secretDoor && doors[t2 >> 4])) sprites[id].posY += dY;
+    move_sprite((sprite_t *)&sprites[id], dX, dY);
 
     // apply friction
     momX = MUL32(momX, friction) >> 8;

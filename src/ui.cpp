@@ -2,7 +2,7 @@
 #include "globals.h"
 #include "utils.h"
 
-const State onClick[4] PROGMEM = {SINGLEPLAYER_INIT, LOBBY_INIT, SETTINGS_INIT, CREDITS_INIT};
+const State onClick[4] PROGMEM = {GAME_INIT, LOBBY_INIT, SETTINGS_INIT, CREDITS_INIT};
 
 void draw_health_bar() {
 }
@@ -12,7 +12,7 @@ void update_title_screen() {
     menuIdx = tclamp(menuIdx, (int8_t)0, (int8_t)3);
     if (arduboy.justReleased(A_BUTTON)) {
         state = pgm_read_byte(&onClick[menuIdx]);
-        singleplayer = state == SINGLEPLAYER_INIT;
+        singleplayer = state == GAME_INIT;
     }
 }
 
