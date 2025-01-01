@@ -1,5 +1,4 @@
 #include "globals.h"
-#include "utils.h"
 
 #ifdef FPS_DEBUG
 class Arduboy2Ex {
@@ -19,6 +18,7 @@ public:
 #endif
 
 void setup() {
+    (void)EEPROM; // remove warning
     arduboy.boot();
     arduboy.waitNoButtons();
     arduboy.readUnitName((char *)sprites[nameTempBuffer].name);
@@ -44,6 +44,7 @@ void loop() {
 
     switch (state) {
     case GAME_INIT:
+        initFastRandomSeed();
         reset_player();
         if (singleplayer)
             reset_ais();
@@ -54,8 +55,8 @@ void loop() {
             update_ais();
         else
             update_multiplayer();
-        hit = handle_player_hit();
         render();
+        hit = handle_player_hit();
         break;
     case TITLE:
         update_title_screen();

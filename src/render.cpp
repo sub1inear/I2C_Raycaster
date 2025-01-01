@@ -1,6 +1,4 @@
-#include "render.h"
 #include "globals.h"
-#include "utils.h"
 // line rendering data
 
 const uint8_t SET_MASK[8] PROGMEM = {
@@ -68,6 +66,107 @@ void draw_vline(uint8_t x, int16_t y0, int16_t y1, uint16_t pat) {
         *p = tp;
     }
 }
+void raycast(sprite_t *sprite, uint16_t *perpWallDist, uint8_t *t, uint8_t *side, int16_t rayDirX, int16_t rayDirY, bool shoot) {
+    
+    //length of ray from one x or y-side to next x or y-side
+    uint16_t deltaDistX = recip(abs(rayDirX) >> 5);  // Q7
+    uint16_t deltaDistY = recip(abs(rayDirY) >> 5);  // Q7
+    deltaDistX = tmin<uint16_t>(deltaDistX, 0x7fff);
+    deltaDistY = tmin<uint16_t>(deltaDistY, 0x7fff);
+
+    //what direction to step in x or y-direction (either +1 or -1)
+    int8_t stepX;
+    int8_t stepY;
+
+    uint16_t fractX; // Q8 [0, 256]
+    uint16_t fractY; // Q8 [0, 256]
+    
+    //which box of the map we're in
+    int8_t mapX = sprite->posX >> 8;
+    int8_t mapY = sprite->posY >> 8;
+
+    //calculate step and initial sideDist
+    if (rayDirX < 0) {
+        stepX = -mapHeight;
+        fractX = sprite->posX - (mapX << 8);   // Q8
+    } else {
+        stepX = +mapHeight;
+        fractX = (1 << 8) - (sprite->posX - (mapX << 8));  // Q8
+    }
+    if (rayDirY < 0) {
+        stepY = -1;
+        fractY = sprite->posY - (mapY << 8);   // Q8
+    } else {
+        stepY = +1;
+        fractY = (1 << 8) - (sprite->posY - (mapY << 8));  // Q8
+    }
+
+    //length of ray from current position to next x or y-side
+    uint16_t sideDistX = UMUL32(fractX, deltaDistX) >> 8; // Q7
+    uint16_t sideDistY = UMUL32(fractY, deltaDistY) >> 8; // Q7
+
+    //perform DDA
+    *side = 0;    //was a NS or a EW wall hit?
+    uint16_t mapIndex = mapX * mapHeight + mapY;  // [mapX][mapY] as 1-D index
+    
+    if (shoot) {
+        uint16_t otherPlayerMapIndexes[I2C_MAX_PLAYERS];
+        for (uint8_t i = 0; i < I2C_MAX_PLAYERS; i++) {
+            otherPlayerMapIndexes[i] = (sprites[i].posX >> 8) * mapHeight + (sprites[i].posY >> 8);
+        }
+        
+        do {
+            for (uint8_t i = 0; i < I2C_MAX_PLAYERS; i++) {
+                if (sprite - sprites == i)
+                    continue;
+                if (otherPlayerMapIndexes[i] == mapIndex) {
+                    sprite->otherPlayerHit = i;
+                    break;
+                }
+            }
+            //jump to next map square, OR in x-direction, OR in y-direction
+            if (sideDistX < sideDistY) {
+                //if (sideDistX + deltaDistX >= (1<<16)) __debugbreak();
+                sideDistX += deltaDistX;
+                mapIndex += stepX;
+                *side = 0;
+            } else {
+                //if (sideDistY + deltaDistY >= (1<<16)) __debugbreak();
+                sideDistY += deltaDistY;
+                mapIndex += stepY;
+                *side = 1;
+            }
+            *t = MAP_LOOKUP(mapIndex);
+            
+            if (*t >= secretDoor) {
+                uint8_t doorsIndex = *t >> 4;
+                doors[doorsIndex] = !doors[doorsIndex];
+            }
+        } while (*t == 0);
+    } else {
+        do {
+            //jump to next map square, OR in x-direction, OR in y-direction
+            if (sideDistX < sideDistY) {
+                //if (sideDistX + deltaDistX >= (1<<16)) __debugbreak();
+                sideDistX += deltaDistX;
+                mapIndex += stepX;
+                *side = 0;
+            } else {
+                //if (sideDistY + deltaDistY >= (1<<16)) __debugbreak();
+                sideDistY += deltaDistY;
+                mapIndex += stepY;
+                *side = 1;
+            }
+            *t = MAP_LOOKUP(mapIndex);
+        } while (*t == 0 || (*t >= secretDoor && doors[*t >> 4]));
+    }
+    if (*t >= secretDoor) {
+        *t = 1;
+    }
+    //Calculate distance projected on camera direction (oblique distance will give fisheye effect!)
+    *perpWallDist = (*side == 0) ? sideDistX - deltaDistX : sideDistY - deltaDistY;  // Q7
+}
+
 
 void render() {
 
@@ -76,116 +175,20 @@ void render() {
     // vector perpendicular to dir, with length planeLen
     int16_t planeX = MUL32(dirY, planeLen) >> 15;    // Q15
     int16_t planeY = MUL32(-dirX, planeLen) >> 15;   // Q15
-    
-
-    //which box of the map we're in
-    int8_t mapX = sprites[id].posX >> 8;
-    int8_t mapY = sprites[id].posY >> 8;
 
     // clear otherPlayerHit
     sprites[id].otherPlayerHit = nullId;
 
     for (uint8_t x = 0; x < FBW; x++) {
-
         int8_t cameraX = (x << 1) - 0x80; // (2 * x / 128 - 1) in Q7
 
         //calculate ray position and direction
         int16_t rayDirX = (dirX >> 1) + (MUL32(planeX, cameraX) >> 8); // Q14
         int16_t rayDirY = (dirY >> 1) + (MUL32(planeY, cameraX) >> 8); // Q14
-
-        //length of ray from one x or y-side to next x or y-side
-        uint16_t deltaDistX = recip(abs(rayDirX) >> 5);  // Q7
-        uint16_t deltaDistY = recip(abs(rayDirY) >> 5);  // Q7
-        deltaDistX = tmin<uint16_t>(deltaDistX, 0x7fff);
-        deltaDistY = tmin<uint16_t>(deltaDistY, 0x7fff);
-
-        //what direction to step in x or y-direction (either +1 or -1)
-        int8_t stepX;
-        int8_t stepY;
-
-        uint16_t fractX; // Q8 [0, 256]
-        uint16_t fractY; // Q8 [0, 256]
-
-        //calculate step and initial sideDist
-        if (rayDirX < 0) {
-            stepX = -mapHeight;
-            fractX = sprites[id].posX - (mapX << 8);   // Q8
-        } else {
-            stepX = +mapHeight;
-            fractX = (1 << 8) - (sprites[id].posX - (mapX << 8));  // Q8
-        }
-        if (rayDirY < 0) {
-            stepY = -1;
-            fractY = sprites[id].posY - (mapY << 8);   // Q8
-        } else {
-            stepY = +1;
-            fractY = (1 << 8) - (sprites[id].posY - (mapY << 8));  // Q8
-        }
-
-        //length of ray from current position to next x or y-side
-        uint16_t sideDistX = UMUL32(fractX, deltaDistX) >> 8; // Q7
-        uint16_t sideDistY = UMUL32(fractY, deltaDistY) >> 8; // Q7
-
-        //perform DDA
-        int8_t side = 0;    //was a NS or a EW wall hit?
-        uint16_t mapIndex = mapX * mapHeight + mapY;  // [mapX][mapY] as 1-D index
-        
+        uint16_t perpWallDist;
         uint8_t t;
-        if (x > 60 && x < 68 && arduboy.justPressed(A_BUTTON)) {
-            uint16_t otherPlayerMapIndexes[I2C_MAX_PLAYERS];
-            for (uint8_t i = 0; i < I2C_MAX_PLAYERS; i++) {
-                otherPlayerMapIndexes[i] = (sprites[i].posX >> 8) * mapHeight + (sprites[i].posY >> 8);
-            }
-            
-            do {
-                for (uint8_t i = 0; i < I2C_MAX_PLAYERS; i++) {
-                    if (i != id && otherPlayerMapIndexes[i] == mapIndex) {
-                        sprites[id].otherPlayerHit = i;
-                        break;
-                    }
-                }
-                //jump to next map square, OR in x-direction, OR in y-direction
-                if (sideDistX < sideDistY) {
-                    //if (sideDistX + deltaDistX >= (1<<16)) __debugbreak();
-                    sideDistX += deltaDistX;
-                    mapIndex += stepX;
-                    side = 0;
-                } else {
-                    //if (sideDistY + deltaDistY >= (1<<16)) __debugbreak();
-                    sideDistY += deltaDistY;
-                    mapIndex += stepY;
-                    side = 1;
-                }
-                t = MAP_LOOKUP(mapIndex);
-                
-                if (t >= secretDoor) {
-                    uint8_t doorsIndex = t >> 4;
-                    doors[doorsIndex] = !doors[doorsIndex];
-                }
-            } while (t == 0);
-        } else {
-            do {
-                //jump to next map square, OR in x-direction, OR in y-direction
-                if (sideDistX < sideDistY) {
-                    //if (sideDistX + deltaDistX >= (1<<16)) __debugbreak();
-                    sideDistX += deltaDistX;
-                    mapIndex += stepX;
-                    side = 0;
-                } else {
-                    //if (sideDistY + deltaDistY >= (1<<16)) __debugbreak();
-                    sideDistY += deltaDistY;
-                    mapIndex += stepY;
-                    side = 1;
-                }
-                t = MAP_LOOKUP(mapIndex);
-            } while (t == 0 || (t >= secretDoor && doors[t >> 4]));
-        }
-        if (t >= secretDoor) {
-            t = 1;
-        }
-        //Calculate distance projected on camera direction (oblique distance will give fisheye effect!)
-        uint16_t perpWallDist = (side == 0) ? sideDistX - deltaDistX : sideDistY - deltaDistY;  // Q7
-
+        uint8_t side;
+        raycast((sprite_t *)&sprites[id], &perpWallDist, &t, &side, rayDirX, rayDirY, x > 60 && x < 68 && arduboy.justPressed(A_BUTTON));
         //save distance, for sprite clipping
         zbuf[x] = perpWallDist << 1;    // Q8
 

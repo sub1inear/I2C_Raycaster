@@ -1,6 +1,4 @@
-#include "sprite.h"
 #include "globals.h"
-#include "utils.h"
 
 void move_sprite(sprite_t *sprite, int8_t dX, int8_t dY) {
     // move, if not blocked by a wall

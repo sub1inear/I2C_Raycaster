@@ -1,6 +1,4 @@
-#include "ui.h"
 #include "globals.h"
-#include "utils.h"
 
 const State onClick[4] PROGMEM = {GAME_INIT, LOBBY_INIT, SETTINGS_INIT, CREDITS_INIT};
 
@@ -17,10 +15,10 @@ void update_title_screen() {
 }
 
 void draw_title_screen() {
-    arduboy.drawBitmap(CENTER_WIDTH(titleImageWidth), 0, titleImage, titleImageWidth, titleImageHeight);
+    Sprites::drawSelfMasked(CENTER_WIDTH(titleImageWidth), 0, titleImage, 0);
     font3x5.setCursor(CENTER_STR("Singleplayer"), 41);
     font3x5.print(F("Singleplayer\nMultiplayer\nSettings\nCredits"));
-    arduboy.drawBitmap(35, 41 + menuIdx * FONT3X5_HEIGHT, menuImage, menuImageWidth, menuImageHeight);
+    Sprites::drawSelfMasked(35, 41 + menuIdx * FONT3X5_HEIGHT, menuImage, 0);
 }
 
 void init_settings_screen() {
@@ -113,6 +111,6 @@ void update_credits_screen() {
 }
 
 void draw_credits_screen() {
-    font3x5.setCursor(0, creditsY);
-    font3x5.print(F("Programming\nSublinear\nZed\n\n\n\n\n\n\n\n\n\n\nArt\nkenny.nl\ngriffpatch"));
+    font3x5.setCursor(20, creditsY);
+    font3x5.print(F("Programming\n\tSublinear\nZed\n\n\n\n\n\n\n\n\n\n\nArt\nkenny.nl\ngriffpatch"));
 }

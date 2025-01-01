@@ -1,9 +1,7 @@
-#include "player.h"
 #include "globals.h"
-#include "utils.h"
 
 void reset_player() {
-    health = maxHealth;
+    sprites[id].health = maxHealth;
     sprites[id].posX = pgm_read_word(&startPos[id].x);
     sprites[id].posY = pgm_read_word(&startPos[id].y);
     orientation = pgm_read_word(&startPos[id].orientation);    
@@ -52,10 +50,9 @@ void move_player() {
 bool handle_player_hit() {
     for (uint8_t i = 0; i < I2C_MAX_PLAYERS; i++) {
         if (sprites[i].otherPlayerHit == id) {
-            health--;
-            if (health == 0) {
+            sprites[id].health--;
+            if (sprites[id].health == 0)
                 reset_player();
-            }
             return true;
         }
     }

@@ -3,7 +3,8 @@
 
 extern Arduboy2 arduboy;
 
-const uint8_t PROGMEM font_images[] = {  
+const uint8_t PROGMEM font_images[] = {
+  FONT3X5_WIDTH, FONT3X5_HEIGHT,
   // #65 Letter 'A'.
   0x1F,  // ░░░▓▓▓▓▓
   0x05,  // ░░░░░▓░▓
@@ -356,7 +357,7 @@ void Font3x5::print(uint16_t n) {
         // skip leading zeros
         found |= (c != FONT_NUMBER_INDEX);
         if (found || i == 0) {
-            arduboy.drawBitmap(_cursorX, _cursorY, &font_images[c * FONT3X5_CHAR_BYTES], FONT3X5_WIDTH, FONT3X5_HEIGHT, _textColor);
+            Sprites::drawSelfMasked(_cursorX, _cursorY, font_images, c);
             _cursorX += FONT3X5_WIDTH + _letterSpacing;
         }
     }
@@ -364,7 +365,7 @@ void Font3x5::print(uint16_t n) {
 
 void Font3x5::print(int16_t n) {
     if (n < 0) {
-        arduboy.drawBitmap(_cursorX, _cursorY, &font_images[FONT_MINUS_INDEX * FONT3X5_CHAR_BYTES], FONT3X5_WIDTH, FONT3X5_HEIGHT, _textColor);
+        Sprites::drawSelfMasked(_cursorX, _cursorY, font_images, FONT_MINUS_INDEX);
         _cursorX += FONT3X5_WIDTH + _letterSpacing;
     }
     print((uint16_t)abs(n));
@@ -401,7 +402,7 @@ void Font3x5::drawChar(char c) {
         return;
     }
     if (imageIdx > -1) {
-        arduboy.drawBitmap(_cursorX, _cursorY, &font_images[imageIdx * FONT3X5_CHAR_BYTES], FONT3X5_WIDTH, FONT3X5_HEIGHT, _textColor);
+        Sprites::drawSelfMasked(_cursorX, _cursorY, font_images, imageIdx);
     }
     _cursorX += FONT3X5_WIDTH + _letterSpacing;
 }

@@ -1,4 +1,4 @@
-#include "utils.h"
+#include "globals.h"
 
 void display_fill_screen(uint8_t color) {
     // modified from Arduboy2 lib
@@ -28,6 +28,10 @@ void display_fill_screen(uint8_t color) {
     );
 }
 
+//for (int x = 0x80; x <= 0xff; x++) {
+//    recip_tab[x - 0x80] = 0x7fffff / x;
+//    printf(x % 8 ? "0x%x, " : "\n    0x%x, ", recip_tab[x - 0x80]);
+//}
 const uint16_t recip_tab[128] PROGMEM = {
     0xffff, 0xfe03, 0xfc0f, 0xfa23, 0xf83e, 0xf660, 0xf489, 0xf2b9,
     0xf0f0, 0xef2e, 0xed73, 0xebbd, 0xea0e, 0xe865, 0xe6c2, 0xe525,
@@ -46,11 +50,47 @@ const uint16_t recip_tab[128] PROGMEM = {
     0x8888, 0x87f7, 0x8767, 0x86d9, 0x864b, 0x85bf, 0x8534, 0x84a9,
     0x8421, 0x8399, 0x8312, 0x828c, 0x8208, 0x8184, 0x8102, 0x8080,
 };
-//for (int x = 0x80; x <= 0xff; x++) {
-//    recip_tab[x - 0x80] = 0x7fffff / x;
-//    printf(x % 8 ? "0x%x, " : "\n    0x%x, ", recip_tab[x - 0x80]);
-//}
 
+//for (i = 0; i < 96; i++) {
+//    rsqrt_tab[i] = (uint8_t)(256.0 * sqrt(1.0 / (1.0 + (i + 0.5) / 32.0)) * 256.0 + 0.5);
+//}
+const uint8_t rsqrt_tab[96] PROGMEM = {
+    0xfe, 0xfa, 0xf7, 0xf3, 0xf0, 0xec, 0xe9, 0xe6, 0xe4, 0xe1, 0xde, 0xdc,
+    0xd9, 0xd7, 0xd4, 0xd2, 0xd0, 0xce, 0xcc, 0xca, 0xc8, 0xc6, 0xc4, 0xc2,
+    0xc1, 0xbf, 0xbd, 0xbc, 0xba, 0xb9, 0xb7, 0xb6, 0xb4, 0xb3, 0xb2, 0xb0,
+    0xaf, 0xae, 0xac, 0xab, 0xaa, 0xa9, 0xa8, 0xa7, 0xa6, 0xa5, 0xa3, 0xa2,
+    0xa1, 0xa0, 0x9f, 0x9e, 0x9e, 0x9d, 0x9c, 0x9b, 0x9a, 0x99, 0x98, 0x97,
+    0x97, 0x96, 0x95, 0x94, 0x93, 0x93, 0x92, 0x91, 0x90, 0x90, 0x8f, 0x8e,
+    0x8e, 0x8d, 0x8c, 0x8c, 0x8b, 0x8a, 0x8a, 0x89, 0x89, 0x88, 0x87, 0x87,
+    0x86, 0x86, 0x85, 0x84, 0x84, 0x83, 0x83, 0x82, 0x82, 0x81, 0x81, 0x80,
+};
+
+// Computes 1/sqrt(x) for x=[0,0xffff] in Q0
+// x > 0 returns 1/sqrt(x) in Q16
+// x = 0 returns 0xffff
+// max error = 3ULP
+uint16_t rsqrt(uint16_t x) {
+
+    if (x <= 1) return 0xffff;
+
+    // normalize
+    uint8_t n = CLZ16(x) & 0xfe;    // even
+    x <<= n;    // Q16
+
+    // initial estimate
+    uint8_t t = pgm_read_byte(&rsqrt_tab[(x >> 9) - 32]);   // Q8
+
+    // Newton-Raphson iteration
+    uint16_t s = t * t;
+    uint16_t r = 0xc000 - (UMUL32(x, s) >> 16); // Q16
+    r = UMUL32(r, t) >> 7;
+
+    // undo normalize
+    n = 7 - (n >> 1);
+    r >>= n;
+
+    return r;   // Q16
+}
 
 // Computes sin(pi*x) and cos(pi*x) for unsigned x=[ 0,2] in Q15
 // max error = 2ULP                    or signed x=[-1,1] in Q15
@@ -87,4 +127,22 @@ void sincospi(uint16_t ux, int16_t* ps, int16_t* pc) {
     }
     *ps = s;
     *pc = c;
+}
+
+void initFastRandomSeed() {
+    power_adc_enable(); // ADC on
+
+    // do an ADC read from an unconnected input pin
+    ADCSRA |= _BV(ADSC); // start conversion (ADMUX has been pre-set in boot())
+    while (bit_is_set(ADCSRA, ADSC)) { } // wait for conversion complete
+
+    seed = ADC;
+    seed ^= (uint16_t)micros();
+
+    power_adc_disable(); // ADC off
+}
+
+uint16_t fastRandom() {
+    seed = seed * 25173u + 13849u;
+    return seed;
 }

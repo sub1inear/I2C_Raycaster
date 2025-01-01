@@ -1,7 +1,5 @@
-#include "multiplayer.h"
 #define I2C_IMPLEMENTATION
 #include "globals.h"
-#include "utils.h"
 
 void onReceive() {
     uint8_t *buffer = I2C::getBuffer();
