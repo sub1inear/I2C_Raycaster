@@ -19,17 +19,17 @@ void update_ais() {
         sprite_t *ai = (sprite_t *)&sprites[i];
         ai->otherPlayerHit = nullId;
 
-        int8_t dX = (player->posX - ai->posX) >> 8;
-        int8_t dY = (player->posY - ai->posY) >> 8;
+        int8_t dX = (player->posX - ai->posX) >> 8; // Q0
+        int8_t dY = (player->posY - ai->posY) >> 8; // Q0
 
-        uint16_t distSq = dX * dX + dY * dY;
+        uint16_t distSq = dX * dX + dY * dY; // Q0
         if (distSq < 20 * 20) {
-            if ((fastRandom() & 0x20) == 0) {
+            if ((fastRandom() & 0x1f) == 0) {
                 // normalize vectors
                 uint16_t invDist = rsqrt(distSq) >> 1; // Q15
 
-                int16_t rayDirX = MUL32(dX, invDist);
-                int16_t rayDirY = MUL32(dY, invDist);
+                int16_t rayDirX = MUL32(dX, invDist) >> 1; // Q14
+                int16_t rayDirY = MUL32(dY, invDist) >> 1; // Q14
                 // save mem with union
                 union {
                     uint16_t perpWallDist;

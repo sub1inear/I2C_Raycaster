@@ -108,9 +108,11 @@ void update_credits_screen() {
         if (creditsY <= -127)
             state = TITLE;
     }
+    if (arduboy.pressed(B_BUTTON))
+        state = TITLE;
 }
 
 void draw_credits_screen() {
     font3x5.setCursor(20, creditsY);
-    font3x5.print(F("Programming\n\tSublinear\nZed\n\n\n\n\n\n\n\n\n\n\nArt\nkenny.nl\ngriffpatch"));
+    font3x5.print(F("Programming\nSublinear\nZed\n\n\n\nArt\nkenny.nl\ngriffpatch\n\n\n\nThanks to\nHaloopdy\nLode Vandevenne\nBrow1067\nBateske"));
 }
