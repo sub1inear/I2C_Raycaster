@@ -1,14 +1,37 @@
 #include "globals.h"
 
 void reset_player() {
-    sprites[id].health = maxHealth;
-    sprites[id].posX = pgm_read_word(&startPos[id].x);
-    sprites[id].posY = pgm_read_word(&startPos[id].y);
-    orientation = pgm_read_word(&startPos[id].orientation);    
+    sprite_t *player = (sprite_t *)&sprites[id];
+    player->health = maxHealth;
+    player->posX = pgm_read_word(&startPos[id].x);
+    player->posY = pgm_read_word(&startPos[id].y);
+    orientation = pgm_read_word(&startPos[id].orientation);  
     sincospi(orientation, &dirX, &dirY);
 }
 
-void move_player() {
+bool check_username_empty() {
+    sprite_t *player = (sprite_t *)&sprites[id];
+    for (char *p = player->name; *p != '\0'; p++) {
+        if (*p != ' ')
+            return false;
+    }
+    return true;
+}
+
+void init_player() {
+    reset_player();
+    sprite_t *player = (sprite_t *)&sprites[id];
+    leaveTimer = 0;
+    player->eliminations = 0;
+    player->deaths = 0;
+    player->otherPlayerHit = nullId;
+    player->eliminatedBy = nullId;
+    if (check_username_empty())
+        strcpy_P((char *)player->name, PSTR("Player"));
+}
+
+void update_player() {
+    sprite_t *player = (sprite_t *)&sprites[id];
     if (arduboy.pressed(UP_BUTTON)) {
         momX += MUL32(dirX, moveSpeed) >> 16;   // Q16
         momY += MUL32(dirY, moveSpeed) >> 16;   // Q16
@@ -36,11 +59,19 @@ void move_player() {
             sincospi(orientation, &dirX, &dirY);    // Q15
         }
     }
+    if (arduboy.pressed(A_BUTTON | B_BUTTON)) {
+        leaveTimer++;
+        if (leaveTimer > leaveTimerMax) {
+            stop_multiplayer();
+            state = TITLE;
+        }    
+    } else
+        leaveTimer = 0;
     
     int8_t dX = (momX + 128) >> 8;  // Q8
     int8_t dY = (momY + 128) >> 8;  // Q8
 
-    move_sprite((sprite_t *)&sprites[id], dX, dY);
+    move_sprite(player, dX, dY);
 
     // apply friction
     momX = MUL32(momX, friction) >> 8;
@@ -48,13 +79,24 @@ void move_player() {
 }
 
 bool handle_player_hit() {
+    sprite_t *player = (sprite_t *)&sprites[id];
+    bool hit = false;
+    player->eliminatedBy = nullId;
     for (uint8_t i = 0; i < I2C_MAX_PLAYERS; i++) {
-        if (sprites[i].otherPlayerHit == id) {
-            sprites[id].health--;
-            if (sprites[id].health == 0)
+        sprite_t *otherPlayer = (sprite_t *)&sprites[i];
+        if (otherPlayer->otherPlayerHit == id) {
+            player->health--;
+            if (player->health == 0) {
                 reset_player();
-            return true;
+                if (player->deaths < 255)
+                    player->deaths++;
+                player->eliminatedBy = i;
+            }
+            hit = true;
         }
+        if (otherPlayer->eliminatedBy == id)
+            if (player->deaths < 255)
+                player->eliminations++;
     }
-    return false;
+    return hit;
 }

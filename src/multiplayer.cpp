@@ -1,7 +1,7 @@
 #define I2C_IMPLEMENTATION
 #include "globals.h"
 
-void onReceive() {
+void on_receive() {
     uint8_t *buffer = I2C::getBuffer();
     uint8_t id = ((sprite_t *)buffer)->id;
     uint8_t *sprite = (uint8_t *)&sprites[id];
@@ -10,17 +10,30 @@ void onReceive() {
     }
     sprites[id].timeout = 1;
 }
-void handshakeOnRequest() {
+void handshake_on_request() {
     I2C::transmit(&state);
 }
-void handshakeOnReceive() {
+void handshake_on_receive() {
     uint8_t *buffer = I2C::getBuffer();
     if (buffer[0] == nullId) {
         state = GAME_INIT;
-        I2C::onReceive(onReceive);
     } else {
         sprites[buffer[0]].timeout = 1;
     }
+}
+
+void start_multiplayer() {
+    I2C::onReceive(on_receive);
+}
+
+void dummy_callback() {
+}
+
+void stop_multiplayer() {
+    I2C::onReceive(dummy_callback);
+    I2C::onRequest(dummy_callback);
+    for (uint8_t i = 0; i < I2C_MAX_PLAYERS; i++)
+        sprites[i].timeout = 0;
 }
 
 void setup_lobby() {
@@ -37,23 +50,30 @@ void setup_lobby() {
 
     // handshake
     for (id = I2C_MAX_PLAYERS - 1; id >= 0; ) {
-        I2C::read(I2C::getAddressFromId(id), &state); // copy state from other player
+        uint8_t otherPlayerState;
+        I2C::read(I2C::getAddressFromId(id), &otherPlayerState);
         switch (I2C::getTWError()) {
         case TW_MR_SLA_NACK:
             I2C::setAddress(I2C::getAddressFromId(id), true);
 
             sprites[id].id = id;
             arduboy.readUnitName((char *)sprites[id].name);
-            I2C::onReceive(handshakeOnReceive);
-            I2C::onRequest(handshakeOnRequest);
+            I2C::onReceive(handshake_on_receive);
+            I2C::onRequest(handshake_on_request);
+            state = LOBBY;
             return;
         case TW_SUCCESS:
             id--;
+            switch (otherPlayerState) {
+            case GAME_INIT:
+            case GAME:
+                state = GAME_INIT;
+                break;
+            }
             break;
         }
     }
     state = TITLE;
-    return;
 }
 
 uint8_t run_timeout() {
@@ -72,13 +92,16 @@ void run_lobby(uint8_t numPlayers) {
         
     font3x5.setCursor(0, 0);
     font3x5.print(numPlayers);
-    font3x5.print(F(" of " STR(I2C_MAX_PLAYERS) " players have joined\nPress A to start\n"));
+    font3x5.print(F(" of " STR(I2C_MAX_PLAYERS) " players have joined\nPress A to start\nId "));
     font3x5.print(id);
-    if (arduboy.pressed(A_BUTTON)) {
+    if (arduboy.justPressed(A_BUTTON)) {
         uint8_t message = nullId;
         I2C::write(0x00, &message, true);
         state = GAME_INIT;
-        I2C::onReceive(onReceive);
+    }
+    if (arduboy.pressed(B_BUTTON)) {
+        stop_multiplayer();
+        state = TITLE;
     }
 }
 void update_multiplayer() {

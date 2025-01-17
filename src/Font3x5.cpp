@@ -397,8 +397,7 @@ void Font3x5::drawChar(char c) {
         imageIdx = FONT_MINUS_INDEX;
         break;
     case CHAR_NEWLINE:
-        _cursorY += _lineHeight;
-        _cursorX = _baseX;
+        newline();
         return;
     }
     if (imageIdx > -1) {

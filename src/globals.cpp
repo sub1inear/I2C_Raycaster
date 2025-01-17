@@ -36,6 +36,10 @@ int8_t creditsY;
 
 uint16_t seed;
 
+uint16_t gameTimer;
+
+uint8_t leaveTimer;
+
 const uint8_t worldMap[mapHeight][mapWidth] PROGMEM = {
 	{1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,},
 	{1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,},
@@ -218,4 +222,9 @@ const startpos_t startPos[I2C_MAX_PLAYERS] PROGMEM = {
     { FIX16(1.5f, 8), FIX16(62.5f, 8), UFIX16(0.75f, 15) },
     { FIX16(1.5f, 8), FIX16(1.5f, 8), UFIX16(0.25f, 15) },
     { FIX16(62.5f, 8), FIX16(1.5f, 8), UFIX16(1.75f, 15) }
+};
+
+
+const char numberSuffixes[I2C_MAX_PLAYERS][3] PROGMEM = {
+	"st", "nd", "rd", "th"
 };

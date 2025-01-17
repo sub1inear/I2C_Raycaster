@@ -18,10 +18,9 @@ public:
 #endif
 
 void setup() {
-    (void)EEPROM; // remove warning
     arduboy.boot();
+    arduboy.safeMode();
     arduboy.waitNoButtons();
-    arduboy.readUnitName((char *)sprites[nameTempBuffer].name);
 }
 
 void loop() {
@@ -38,26 +37,8 @@ void loop() {
     arduboy.pollButtons();
     
     bool hit = false;
-    uint8_t numPlayers;
-    if (!singleplayer)
-        numPlayers = run_timeout();
-
+    
     switch (state) {
-    case GAME_INIT:
-        initFastRandomSeed();
-        reset_player();
-        if (singleplayer)
-            reset_ais();
-        state = GAME;
-    case GAME:
-        move_player();
-        if (singleplayer)
-            update_ais();
-        else
-            update_multiplayer();
-        render();
-        hit = handle_player_hit();
-        break;
     case TITLE:
         update_title_screen();
         draw_title_screen();
@@ -77,11 +58,40 @@ void loop() {
         draw_settings_screen();
         break;
     case LOBBY_INIT:
-        state = LOBBY;
         setup_lobby();
         break;
-    case LOBBY:
+    case LOBBY: {
+        uint8_t numPlayers = run_timeout();
         run_lobby(numPlayers);
+        break;
+    }
+    case GAME_INIT:
+        init_fast_random_seed();
+        if (singleplayer) {
+            id = singleplayerId;
+            init_ais();
+        } else
+            start_multiplayer();
+        init_player();
+        state = GAME;
+    case GAME:
+        update_player();
+        if (singleplayer)
+            update_ais();
+        else {
+            update_multiplayer();
+            run_timeout();
+        }
+        render();
+        hit = handle_player_hit();
+        if (check_game_over()) {
+            arduboy.waitNoButtons();
+            state = GAME_OVER;
+        }
+        break;
+    case GAME_OVER:
+        update_game_over();
+        draw_game_over();
         break;
     }
 

@@ -21,7 +21,8 @@ enum State {
     LOBBY_INIT,
     LOBBY,
     GAME_INIT,
-    GAME
+    GAME,
+    GAME_OVER,
 };
 
 struct startpos_t {
@@ -35,6 +36,9 @@ struct sprite_t {
     int16_t posY;  // Q8
     char name[ARDUBOY_UNIT_NAME_BUFFER_SIZE];
     uint8_t otherPlayerHit;
+    uint8_t eliminatedBy;
+    uint8_t eliminations;
+    uint8_t deaths;
     uint8_t timeout;
     uint8_t health;
     uint8_t id; // must be last
@@ -59,8 +63,9 @@ inline void const* pgm_read_ptr(void const* p) { return *(void const**)p; }
 #define _STR(str) #str
 #define STR(str) _STR(str)
 
-#define CENTER_STR(str) WIDTH / 2 - ((sizeof(str) - 1) * (FONT3X5_WIDTH + 1) - 1) / 2
-#define CENTER_WIDTH(width) WIDTH / 2 - width / 2
+#define STR_WIDTH(chars) ((chars - 1) * (FONT3X5_WIDTH + 1) - 1)
+#define CENTER_WIDTH(width) (WIDTH / 2 - width / 2)
+#define CENTER_STR(str) CENTER_WIDTH(STR_WIDTH(sizeof(str)))
 #ifdef _MSC_VER
 #define FORCEINLINE __forceinline
 #else
@@ -199,8 +204,8 @@ template<class T> FORCEINLINE T tsign(T a, T scale) { return a < 0 ? -scale : a 
 void display_fill_screen(uint8_t color);
 uint16_t rsqrt(uint16_t x);
 void sincospi(uint16_t ux, int16_t* ps, int16_t* pc);
-void initFastRandomSeed();
-uint16_t fastRandom();
+void init_fast_random_seed();
+uint16_t fast_random();
 
 constexpr int FBW = 128;
 constexpr int FBH = 64;
@@ -212,6 +217,7 @@ constexpr int16_t moveSpeed = FIX16(0.005f, 17); // Q17
 constexpr int16_t turnSpeed = FIX16(0.01f, 15); // Q15
 constexpr int16_t friction = FIX16(0.9f, 8);    // Q8
 constexpr uint8_t maxHealth = 20;
+constexpr uint8_t aiMaxHealth = 10;
 
 constexpr uint8_t mapWidth = 64;
 constexpr uint8_t mapHeight = 64;
@@ -242,13 +248,15 @@ constexpr uint8_t titleImageHeight = 47;
 constexpr uint8_t menuImageWidth = 5;
 constexpr uint8_t menuImageHeight = 5;
 
-constexpr uint8_t nameTempBuffer = 0;
-
 constexpr uint8_t nullId = 255;
 
 constexpr uint8_t numItems = 10;
 
 constexpr uint8_t singleplayerId = 0;
+
+constexpr uint16_t gameTimerMax = (uint16_t)1 * 60 * 60;
+
+constexpr uint8_t leaveTimerMax = 200;
 
 extern Arduboy2Base arduboy;
 extern Font3x5 font3x5;
@@ -284,6 +292,10 @@ extern int8_t creditsY;
 
 extern uint16_t seed;
 
+extern uint16_t gameTimer;
+
+extern uint8_t leaveTimer;
+
 extern const uint8_t PROGMEM worldMap[mapWidth][mapHeight] ;
 
 extern const unsigned char PROGMEM laserTaggerPlusMask[];
@@ -294,24 +306,31 @@ extern const uint8_t PROGMEM titleImage[];
 extern const uint8_t PROGMEM menuImage[];
 
 extern const startpos_t startPos[I2C_MAX_PLAYERS] PROGMEM;
+extern const char numberSuffixes[][3] PROGMEM;
 
 void draw_vline(uint8_t x, int16_t y0, int16_t y1, uint16_t pat);
 void raycast(sprite_t *sprite, uint16_t *perpWallDist, uint8_t *t, uint8_t *side, int16_t rayDirX, int16_t rayDirY, bool shoot);
 void render();
 
 void reset_ai(sprite_t *sprite);
-void reset_ais();
+void init_ai(sprite_t *ai);
+void init_ais();
 void update_ais();
 
+void on_receive();
+void start_multiplayer();
+void stop_multiplayer();
 void setup_lobby();
 uint8_t run_timeout();
 void run_lobby(uint8_t numPlayers);
 void update_multiplayer();
 
-
 void reset_player();
-void move_player();
+bool check_username_empty();
+void init_player();
+void update_player();
 bool handle_player_hit();
+
 void move_sprite(sprite_t *sprite, int8_t dX, int8_t dY);
 
 
@@ -324,3 +343,6 @@ void draw_settings_screen();
 void init_credits_screen();
 void update_credits_screen();
 void draw_credits_screen();
+bool check_game_over();
+void update_game_over();
+void draw_game_over();
