@@ -11,6 +11,7 @@ void display_fill_screen(uint8_t color) {
         "   ldi   %B[count], %[len_msb]               \n\t"
         "1: ld    __tmp_reg__, %a[ptr]      ;2        \n\t" //tmp = *(image)
         "   out   %[spdr], __tmp_reg__      ;1        \n\t" //SPDR = tmp
+        "   rjmp .+0                        ;2        \n\t"
         "2: sbiw  %A[count], 1              ;2        \n\t" //len --
         "   sbrc  %A[count], 0              ;1/2      \n\t" //loop twice for cheap delay
         "   rjmp  2b                        ;2        \n\t"
