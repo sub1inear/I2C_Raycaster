@@ -36,7 +36,7 @@ void loop() {
 
     arduboy.pollButtons();
     
-    bool hit = false;
+    bool flash = false;
     
     switch (state) {
     case TITLE:
@@ -67,15 +67,18 @@ void loop() {
     }
     case GAME_INIT:
         init_fast_random_seed();
+        init_powerups();
         if (singleplayer) {
             id = singleplayerId;
             init_ais();
         } else
             start_multiplayer();
         init_player();
+        gameTimer = 0;
         state = GAME;
     case GAME:
         update_player();
+        flash |= update_powerups();
         if (singleplayer)
             update_ais();
         else {
@@ -83,11 +86,9 @@ void loop() {
             run_timeout();
         }
         render();
-        hit = handle_player_hit();
-        if (check_game_over()) {
-            arduboy.waitNoButtons();
+        flash |= handle_player_hit();
+        if (check_game_over())
             state = GAME_OVER;
-        }
         break;
     case GAME_OVER:
         update_game_over();
@@ -95,5 +96,5 @@ void loop() {
         break;
     }
 
-    display_fill_screen(hit ? 0xff : 0x00);
+    display_fill_screen(flash ? 0xff : 0x00);
 }

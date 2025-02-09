@@ -1,14 +1,13 @@
 #include "globals.h"
 
 void reset_ai(sprite_t *ai) {
-    ai->posX = pgm_read_word(&startPos[ai - sprites].x);
-    ai->posY = pgm_read_word(&startPos[ai - sprites].y);
+    ai->posX = pgm_read_word(&playerStartPos[ai - sprites].posX);
+    ai->posY = pgm_read_word(&playerStartPos[ai - sprites].posY);
     ai->timeout = 1;
     ai->health = aiMaxHealth;
 }
 
 void init_ai(sprite_t *ai) {
-    reset_ai(ai);
     ai->deaths = 0;
     ai->eliminations = 0;
     ai->otherPlayerHit = nullId;
@@ -17,6 +16,7 @@ void init_ai(sprite_t *ai) {
     ai->name[1] = 'I';
     ai->name[2] = '0' + ai - sprites;
     ai->name[3] = '\0';
+    reset_ai(ai);
 }
 
 void init_ais() {
@@ -43,7 +43,7 @@ void update_ais() {
 
                 int16_t rayDirX = MUL32(dX, invDist) >> 1; // Q14
                 int16_t rayDirY = MUL32(dY, invDist) >> 1; // Q14
-                // save mem with union
+                // save memory with union
                 union {
                     uint16_t perpWallDist;
                     uint8_t t;

@@ -130,6 +130,7 @@ void sincospi(uint16_t ux, int16_t* ps, int16_t* pc) {
 }
 
 void init_fast_random_seed() {
+    // modified from Arduboy2 lib
     power_adc_enable(); // ADC on
 
     // do an ADC read from an unconnected input pin
@@ -137,9 +138,9 @@ void init_fast_random_seed() {
     while (bit_is_set(ADCSRA, ADSC)) { } // wait for conversion complete
 
     seed = ADC;
+    power_adc_disable(); // ADC off
     seed ^= (uint16_t)micros();
 
-    power_adc_disable(); // ADC off
 }
 
 uint16_t fast_random() {

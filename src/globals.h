@@ -2,6 +2,7 @@
 #include <Arduboy2.h>
 
 #define I2C_MAX_PLAYERS 4
+#define I2C_CUSTOM_HANDSHAKE
 #define I2C_FREQUENCY 400000
 
 #include <ArduboyI2C.h>
@@ -25,10 +26,24 @@ enum State {
     GAME_OVER,
 };
 
-struct startpos_t {
-	int16_t x;
-	int16_t y;
+// 8 max sprite types because of image index overflow
+enum SpriteType : uint8_t {
+    PLAYER,
+    HEALTH,
+    SHIELD,
+    SPEED_BOOST,
+};
+
+struct player_startpos_t {
+	int16_t posX;
+	int16_t posY;
 	uint16_t orientation;
+};
+
+struct powerup_startpos_t {
+    int16_t posX;
+    int16_t posY;
+    SpriteType type;
 };
 
 struct sprite_t {
@@ -41,6 +56,7 @@ struct sprite_t {
     uint8_t deaths;
     uint8_t timeout;
     uint8_t health;
+    SpriteType type;
     uint8_t id; // must be last
 };
 
@@ -213,17 +229,18 @@ constexpr int BUF_BYTES = FBW * FBH / 8;
 
 constexpr int16_t planeLen = FIX16(0.66f, 15);  // Q15, sets FOV
 constexpr int16_t invPlaneLen = FIX16(1/0.66f, 14);  // Q14
-constexpr int16_t moveSpeed = FIX16(0.005f, 17); // Q17
+constexpr int16_t initialMoveSpeed = FIX16(0.005f, 17);  // Q17
+constexpr int16_t maxMoveSpeed = FIX16(0.01f, 17);
 constexpr int16_t turnSpeed = FIX16(0.01f, 15); // Q15
 constexpr int16_t friction = FIX16(0.9f, 8);    // Q8
-constexpr uint8_t maxHealth = 20;
+constexpr uint8_t initialMaxHealth = 20;
 constexpr uint8_t aiMaxHealth = 10;
 
 constexpr uint8_t mapWidth = 64;
 constexpr uint8_t mapHeight = 64;
 
-const uint8_t numDoors = 15;
-const uint8_t secretDoor = 5;
+constexpr uint8_t numDoors = 15;
+constexpr uint8_t secretDoor = 5;
 
 constexpr uint8_t laserTaggerWidth = 50;
 constexpr uint8_t laserTaggerHeight = 32;
@@ -250,7 +267,7 @@ constexpr uint8_t menuImageHeight = 5;
 
 constexpr uint8_t nullId = 255;
 
-constexpr uint8_t numItems = 10;
+constexpr uint8_t numPowerups = 12;
 
 constexpr uint8_t singleplayerId = 0;
 
@@ -282,7 +299,7 @@ extern uint16_t zbuf[FBW]; // Q8
 extern uint8_t doors[numDoors];
 
 // public player data / other player data
-extern volatile sprite_t sprites[I2C_MAX_PLAYERS];
+extern volatile sprite_t sprites[I2C_MAX_PLAYERS + numPowerups];
 
 extern bool singleplayer;
 
@@ -296,7 +313,11 @@ extern uint16_t gameTimer;
 
 extern uint8_t leaveTimer;
 
-extern const uint8_t PROGMEM worldMap[mapWidth][mapHeight] ;
+extern int16_t moveSpeed;
+extern uint8_t maxHealth;
+extern uint8_t shield;
+
+extern const uint8_t PROGMEM worldMap[mapWidth][mapHeight];
 
 extern const unsigned char PROGMEM laserTaggerPlusMask[];
 extern const unsigned char PROGMEM laserTaggerFlashPlusMask[];
@@ -305,7 +326,8 @@ extern const uint8_t PROGMEM _texMask[];
 extern const uint8_t PROGMEM titleImage[];
 extern const uint8_t PROGMEM menuImage[];
 
-extern const startpos_t startPos[I2C_MAX_PLAYERS] PROGMEM;
+extern const player_startpos_t playerStartPos[I2C_MAX_PLAYERS] PROGMEM;
+extern const powerup_startpos_t powerupStartPos[numPowerups] PROGMEM;
 extern const char numberSuffixes[][3] PROGMEM;
 
 void draw_vline(uint8_t x, int16_t y0, int16_t y1, uint16_t pat);
@@ -333,6 +355,8 @@ bool handle_player_hit();
 
 void move_sprite(sprite_t *sprite, int8_t dX, int8_t dY);
 
+void init_powerups();
+bool update_powerups();
 
 void draw_health_bar();
 void update_title_screen();

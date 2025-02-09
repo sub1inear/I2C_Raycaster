@@ -2,10 +2,15 @@
 
 void reset_player() {
     sprite_t *player = (sprite_t *)&sprites[id];
+    maxHealth = initialMaxHealth;
+    moveSpeed = initialMoveSpeed;
+    shield = 0;
     player->health = maxHealth;
-    player->posX = pgm_read_word(&startPos[id].x);
-    player->posY = pgm_read_word(&startPos[id].y);
-    orientation = pgm_read_word(&startPos[id].orientation);  
+    player->posX = pgm_read_word(&playerStartPos[id].posX);
+    player->posY = pgm_read_word(&playerStartPos[id].posY);
+    momX = 0;
+    momY = 0;
+    orientation = pgm_read_word(&playerStartPos[id].orientation);  
     sincospi(orientation, &dirX, &dirY);
 }
 
@@ -19,7 +24,6 @@ bool check_username_empty() {
 }
 
 void init_player() {
-    reset_player();
     sprite_t *player = (sprite_t *)&sprites[id];
     leaveTimer = 0;
     player->eliminations = 0;
@@ -28,6 +32,7 @@ void init_player() {
     player->eliminatedBy = nullId;
     if (check_username_empty())
         strcpy_P((char *)player->name, PSTR("Player"));
+    reset_player();
 }
 
 void update_player() {
@@ -85,12 +90,16 @@ bool handle_player_hit() {
     for (uint8_t i = 0; i < I2C_MAX_PLAYERS; i++) {
         sprite_t *otherPlayer = (sprite_t *)&sprites[i];
         if (otherPlayer->otherPlayerHit == id) {
-            player->health--;
-            if (player->health == 0) {
-                reset_player();
-                if (player->deaths < 255)
-                    player->deaths++;
-                player->eliminatedBy = i;
+            if (shield)
+                shield--;
+            else {
+                player->health--;
+                if (player->health == 0) {
+                    reset_player();
+                    if (player->deaths < 255)
+                        player->deaths++;
+                    player->eliminatedBy = i;
+                }
             }
             hit = true;
         }

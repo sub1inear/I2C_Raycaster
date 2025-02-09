@@ -227,7 +227,7 @@ void render() {
     //
     //
     //
-    for (uint8_t s = 0; s < I2C_MAX_PLAYERS; s++) {
+    for (uint8_t s = 0; s < I2C_MAX_PLAYERS + numPowerups; s++) {
         if (sprites[s].timeout) { // only draws sprites who have joined, 0 for sprites[id]
             // translate sprite position to relative to camera
             int16_t spriteX = sprites[s].posX - sprites[id].posX;
@@ -282,6 +282,8 @@ void render() {
                     uint8_t accumStart = texInitY & 0xff;   //drawData.texYInit.getFraction();
                     uint8_t fullStep = texStep >> 8;    //drawData.stepY.getInteger();
                     uint8_t fracStep = texStep & 0xff;  //drawData.stepY.getFraction();
+                    
+                    uint8_t spriteOffset = sprites[s].type * texBytes;
 
                     for (uint8_t x = drawStartX; x < drawEndX; x++) { //For every strip (x)
 
@@ -291,10 +293,10 @@ void render() {
 
                             uint8_t tx = texX >> 8; //texX.getInteger();
 
-                            //texData = readTextureStrip16(spritesheet, fr, tx) >> preshift;
-                            //texMask = readTextureStrip16(spritesheet_Mask, fr, tx) >> preshift;
-                            uint16_t texData = (pgm_read_byte(&_texData[tx]) | (pgm_read_byte(&_texData[tx+16]) << 8)) >> preshift;
-                            uint16_t texMask = (pgm_read_byte(&_texMask[tx]) | (pgm_read_byte(&_texMask[tx+16]) << 8)) >> preshift;
+                            //texData = readTextureStrip16(spritesheet, fr, tx + spriteOffset) >> preshift;
+                            //texMask = readTextureStrip16(spritesheet_Mask, fr, tx + spriteOffset) >> preshift;
+                            uint16_t texData = (pgm_read_byte(&_texData[tx + spriteOffset]) | (pgm_read_byte(&_texData[tx + spriteOffset + 16]) << 8)) >> preshift;
+                            uint16_t texMask = (pgm_read_byte(&_texMask[tx + spriteOffset]) | (pgm_read_byte(&_texMask[tx + spriteOffset + 16]) << 8)) >> preshift;
                             if (texMask) {
 
                                 uint8_t accum = accumStart;
