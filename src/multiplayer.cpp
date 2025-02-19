@@ -42,7 +42,7 @@ void setup_lobby() {
     if (I2C::detectEmulator()) {
         font3x5.setCursor(CENTER_STR("Emulator does not support"), 25);
         font3x5.print(F("Emulator does not support\n    I2C multiplayer."));
-        display_fill_screen(0x00);
+        display_fill_screen(true, 0x00);
         while (!arduboy.justPressed(A_BUTTON) && arduboy.notPressed(B_BUTTON))
             arduboy.pollButtons();
         state = TITLE;

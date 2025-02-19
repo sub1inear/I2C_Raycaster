@@ -24,6 +24,7 @@ enum State {
     LOBBY,
     GAME_INIT,
     GAME,
+    GAME_OVER_INIT,
     GAME_OVER,
 };
 
@@ -125,7 +126,8 @@ template<class T> FORCEINLINE T tmax(T a, T b) { return a < b ? b : a; }
 template<class T> FORCEINLINE T tclamp(T x, T a, T b) { return tmin(tmax(x, a), b); }
 template<class T> FORCEINLINE T tsign(T a, T scale) { return a < 0 ? -scale : a > 0 ? scale : 0; }
 
-void display_fill_screen(uint8_t color);
+void display_fill_screen(bool fill, uint8_t color);
+void wipe_effect();
 void init_fast_random_seed();
 uint16_t fast_random();
 
@@ -222,6 +224,8 @@ extern uint8_t leaveTimer;
 extern int16_t moveSpeed;
 extern uint8_t maxHealth;
 extern uint8_t shield;
+
+extern const uint8_t PROGMEM wipeEffectDelay[WIDTH];
 
 extern const uint8_t PROGMEM worldMap[mapWidth][mapHeight];
 

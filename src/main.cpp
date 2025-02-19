@@ -66,6 +66,7 @@ void loop() {
         break;
     }
     case GAME_INIT:
+        wipe_effect();
         init_fast_random_seed();
         init_powerups();
         if (singleplayer) {
@@ -88,13 +89,16 @@ void loop() {
         render();
         flash |= receive_multiplayer();
         if (check_game_over())
-            state = GAME_OVER;
+            state = GAME_OVER_INIT;
         break;
+    case GAME_OVER_INIT:
+        wipe_effect();
+        state = GAME_OVER;
     case GAME_OVER:
         update_game_over();
         draw_game_over();
         break;
     }
-
-    display_fill_screen(flash ? 0xff : 0x00);
+    bool clear = state != GAME_INIT && state != GAME_OVER_INIT;
+    display_fill_screen(clear, flash ? 0xff : 0x00);
 }
