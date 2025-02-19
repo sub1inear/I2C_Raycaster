@@ -49,6 +49,12 @@ void wipe_effect() {
     }
 }
 
+void swap(uint8_t *array, uint8_t i, uint8_t j) {
+    uint8_t temp = array[i];
+    array[i] = array[j];
+    array[j] = temp;
+}
+
 void init_fast_random_seed() {
     // modified from Arduboy2 lib
     power_adc_enable(); // ADC on

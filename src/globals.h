@@ -128,6 +128,7 @@ template<class T> FORCEINLINE T tsign(T a, T scale) { return a < 0 ? -scale : a 
 
 void display_fill_screen(bool fill, uint8_t color);
 void wipe_effect();
+void swap(uint8_t *array, uint8_t i, uint8_t j);
 void init_fast_random_seed();
 uint16_t fast_random();
 

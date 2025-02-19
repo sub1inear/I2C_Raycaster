@@ -137,22 +137,21 @@ void draw_game_over() {
     for (uint8_t i = 0; i < I2C_MAX_PLAYERS; i++)
         eliminations[i] = sprites[i].timeout || i == id ? sprites[i].eliminations : 0;
 
-    uint8_t order[I2C_MAX_PLAYERS];
-    uint8_t orderIdxs[I2C_MAX_PLAYERS];
-    uint8_t playerOrder = id;
-
-    for (uint8_t i = 0; i < I2C_MAX_PLAYERS; i++) {
-        order[i] = 0;
-        orderIdxs[i] = i;
-        for (uint8_t j = 0; j < I2C_MAX_PLAYERS; j++) {
-            if (eliminations[j] > order[i]) {
-                if (j == id)
-                    playerOrder = i;
-                order[i] = eliminations[j];
-                orderIdxs[i] = j;
+    uint8_t orderIdxs[I2C_MAX_PLAYERS] = {0, 1, 2, 3};
+    for (uint8_t i = 0; i < I2C_MAX_PLAYERS - 1; i++) {
+        for (uint8_t j = 0; j < I2C_MAX_PLAYERS - i - 1; j++) {
+            if (eliminations[j] < eliminations[j + 1]) {
+                swap(eliminations, j, j + 1);
+                swap(orderIdxs, j, j + 1);
             }
         }
-        eliminations[orderIdxs[i]] = 0;
+    }
+    uint8_t playerOrder;
+    for (uint8_t i = 0; i < I2C_MAX_PLAYERS - 1; i++) {
+        if (orderIdxs[i] == id) {
+            playerOrder = i;
+            break;
+        }
     }
     font3x5.setCursor(CENTER_STR("xxx place"), 10);
     font3x5.print(playerOrder + 1);
