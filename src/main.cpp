@@ -86,7 +86,7 @@ void loop() {
             run_timeout();
         }
         render();
-        flash |= handle_player_hit();
+        flash |= receive_multiplayer();
         if (check_game_over())
             state = GAME_OVER;
         break;

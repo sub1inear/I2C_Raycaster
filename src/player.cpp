@@ -11,7 +11,7 @@ void reset_player() {
     momX = 0;
     momY = 0;
     orientation = pgm_read_word(&playerStartPos[id].orientation);  
-    sincospi(orientation, &dirX, &dirY);
+    fixpt::sincospi(orientation, dirX, dirY);
 }
 
 bool check_username_empty() {
@@ -28,6 +28,8 @@ void init_player() {
     leaveTimer = 0;
     player->eliminations = 0;
     player->deaths = 0;
+    // need init because set after first update multiplayer
+    // not needed with player->powerupTaken
     player->otherPlayerHit = nullId;
     player->eliminatedBy = nullId;
     if (check_username_empty())
@@ -57,11 +59,11 @@ void update_player() {
     } else {
         if (arduboy.pressed(RIGHT_BUTTON)) {
             orientation += turnSpeed;
-            sincospi(orientation, &dirX, &dirY);    // Q15
+            fixpt::sincospi(orientation, dirX, dirY);    // Q15
         }
         if (arduboy.pressed(LEFT_BUTTON)) {
             orientation -= turnSpeed;
-            sincospi(orientation, &dirX, &dirY);    // Q15
+            fixpt::sincospi(orientation, dirX, dirY);    // Q15
         }
     }
     if (arduboy.pressed(A_BUTTON | B_BUTTON)) {
@@ -81,31 +83,4 @@ void update_player() {
     // apply friction
     momX = MUL32(momX, friction) >> 8;
     momY = MUL32(momY, friction) >> 8;
-}
-
-bool handle_player_hit() {
-    sprite_t *player = (sprite_t *)&sprites[id];
-    bool hit = false;
-    player->eliminatedBy = nullId;
-    for (uint8_t i = 0; i < I2C_MAX_PLAYERS; i++) {
-        sprite_t *otherPlayer = (sprite_t *)&sprites[i];
-        if (otherPlayer->otherPlayerHit == id) {
-            if (shield)
-                shield--;
-            else {
-                player->health--;
-                if (player->health == 0) {
-                    reset_player();
-                    if (player->deaths < 255)
-                        player->deaths++;
-                    player->eliminatedBy = i;
-                }
-            }
-            hit = true;
-        }
-        if (otherPlayer->eliminatedBy == id)
-            if (player->deaths < 255)
-                player->eliminations++;
-    }
-    return hit;
 }

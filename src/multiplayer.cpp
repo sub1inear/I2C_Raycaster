@@ -109,3 +109,32 @@ void update_multiplayer() {
     // send data over I2C
     I2C::write(0x00, &sprites[id], false);
 }
+
+bool receive_multiplayer() {
+    sprite_t *player = (sprite_t *)&sprites[id];
+    bool hit = false;
+    player->eliminatedBy = nullId;
+    for (uint8_t i = 0; i < I2C_MAX_PLAYERS; i++) {
+        sprite_t *otherPlayer = (sprite_t *)&sprites[i];
+        if (otherPlayer->otherPlayerHit == id) {
+            if (shield)
+                shield--;
+            else {
+                player->health--;
+                if (player->health == 0) {
+                    reset_player();
+                    if (player->deaths < 255)
+                        player->deaths++;
+                    player->eliminatedBy = i;
+                }
+            }
+            hit = true;
+        }
+        if (otherPlayer->eliminatedBy == id)
+            if (player->deaths < 255)
+                player->eliminations++;
+        if (otherPlayer->powerupTaken != nullId)
+            sprites[otherPlayer->powerupTaken].timeout = 0;
+    }
+    return hit;
+}

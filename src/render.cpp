@@ -69,8 +69,8 @@ void draw_vline(uint8_t x, int16_t y0, int16_t y1, uint16_t pat) {
 void raycast(sprite_t *sprite, uint16_t *perpWallDist, uint8_t *t, uint8_t *side, int16_t rayDirX, int16_t rayDirY, bool shoot) {
     
     //length of ray from one x or y-side to next x or y-side
-    uint16_t deltaDistX = recip(abs(rayDirX) >> 5);  // Q7
-    uint16_t deltaDistY = recip(abs(rayDirY) >> 5);  // Q7
+    uint16_t deltaDistX = fixpt::recip(abs(rayDirX) >> 5);  // Q7
+    uint16_t deltaDistY = fixpt::recip(abs(rayDirY) >> 5);  // Q7
     deltaDistX = tmin<uint16_t>(deltaDistX, 0x7fff);
     deltaDistY = tmin<uint16_t>(deltaDistY, 0x7fff);
 
@@ -192,7 +192,7 @@ void render() {
         //save distance, for sprite clipping
         zbuf[x] = perpWallDist << 1;    // Q8
 
-        uint16_t invPerpWallDist = recip(perpWallDist);
+        uint16_t invPerpWallDist = fixpt::recip(perpWallDist);
         //Calculate height of line to draw on screen
         //int8_t lineHeight = (perpWallDist > (1 << 7)) ? (FBH << 7) / perpWallDist : FBH;  // refcode
         //int8_t lineHeight = (perpWallDist > (1 << 7)) ? recip(perpWallDist) >> 3 : FBH;   // optimized for wallHeight=64
@@ -247,7 +247,7 @@ void render() {
                 transformX = MUL32(transformX, invPlaneLen) >> 14;  // Q8
 
                 // int spriteScreenX = int((FBW / 2) * (1.0 + transformX / transformY));
-                int16_t invTransformY = recip(transformY); // [0, 16.0] in Q8
+                int16_t invTransformY = fixpt::recip(transformY); // [0, 16.0] in Q8
                 int32_t scale32 = FIX16(1.0f, 8) + (MUL32(transformX, invTransformY) >> 8); // Q8
                 int16_t scale = tclamp<int32_t>(scale32, -32768, 32767);  // Q8
                 int16_t spriteScreenX = MUL32(FBW / 2, scale) >> 8;  // [-8192, 8191] in Q0
@@ -266,7 +266,7 @@ void render() {
                     font3x5.setCursor(drawStartX / 2 + drawEndX / 2 - 10, drawStartY - 6);
                     font3x5.print((char *)sprites[s].name);
 
-                    uint16_t invSpriteSize = recip(spriteSize) - 1;   // ensure <= (65535/spriteSize)
+                    uint16_t invSpriteSize = fixpt::recip(spriteSize) - 1;   // ensure <= (65535/spriteSize)
                     uint16_t texStep = invSpriteSize / (256 / texSize);  // Q8
 
                     uint16_t texInitX = (2*drawStartX - 2*spriteScreenX + spriteSize) * (texSize/2);

@@ -12,6 +12,7 @@ void init_ai(sprite_t *ai) {
     ai->eliminations = 0;
     ai->otherPlayerHit = nullId;
     ai->eliminatedBy = nullId;
+    ai->powerupTaken = nullId;
     ai->name[0] = 'A';
     ai->name[1] = 'I';
     ai->name[2] = '0' + ai - sprites;
@@ -39,7 +40,7 @@ void update_ais() {
         if (distSq < 20 * 20) {
             if ((fast_random() & 0x1f) == 0) {
                 // normalize vectors
-                uint16_t invDist = rsqrt(distSq) >> 1; // Q15
+                uint16_t invDist = fixpt::rsqrt(distSq) >> 1; // Q15
 
                 int16_t rayDirX = MUL32(dX, invDist) >> 1; // Q14
                 int16_t rayDirY = MUL32(dY, invDist) >> 1; // Q14

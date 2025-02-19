@@ -7,6 +7,7 @@
 
 #include <ArduboyI2C.h>
 #include "Font3x5.h"
+#include "fixpt.h"
 
 // #define FPS_DEBUG
 #define AUTO_START false
@@ -56,6 +57,7 @@ struct sprite_t {
     uint8_t deaths;
     uint8_t timeout;
     uint8_t health;
+    uint8_t powerupTaken;
     SpriteType type;
     uint8_t id; // must be last
 };
@@ -82,85 +84,6 @@ inline void const* pgm_read_ptr(void const* p) { return *(void const**)p; }
 #define STR_WIDTH(chars) ((chars - 1) * (FONT3X5_WIDTH + 1) - 1)
 #define CENTER_WIDTH(width) (WIDTH / 2 - width / 2)
 #define CENTER_STR(str) CENTER_WIDTH(STR_WIDTH(sizeof(str)))
-#ifdef _MSC_VER
-#define FORCEINLINE __forceinline
-#else
-#define FORCEINLINE __attribute__((always_inline)) inline
-#endif
-
-#ifdef __AVR__
-FORCEINLINE uint8_t CLZ16(uint16_t u) { return __builtin_clz(u); }
-#else
-FORCEINLINE uint8_t CLZ16(uint16_t a) {
-    uint8_t r = 16;
-    if (a >= 0x0100) { a >>= 8; r -= 8; }
-    if (a >= 0x0010) { a >>= 4; r -= 4; }
-    if (a >= 0x0004) { a >>= 2; r -= 2; }
-    r -= a - (a & (a >> 1));
-    return r;
-}
-#endif
-
-// convert float to signed 16-bit fixed-point, with q fraction bits
-#define FIX16(x, q) ((int16_t)((float)(x) * (1UL << (q)) + ((x) < 0.0f ? -0.5f : 0.5f)))
-
-// convert float to unsigned 16-bit fixed-point, with q fraction bits
-#define UFIX16(x, q) ((uint16_t)((float)(x) * (1UL << (q)) + 0.5f))
-
-// signed 16x16 multiply, with 32-bit result
-#define MUL32(a, b)   ((int32_t)(int16_t)(a) * (int32_t)(int16_t)(b))
-
-// unsigned 16x16 multiply, with 32-bit result
-#define UMUL32(a, b)  ((uint32_t)(uint16_t)(a) * (uint32_t)(uint16_t)(b))
-
-#ifdef __AVR__
-FORCEINLINE int16_t MUL15(int16_t a, int16_t b) {
-    /*
-               A1 A0
-               B1 B0
-            ========
-               A0*B0
-            A1*B0
-            A0*B1
-         A1*B1
-         ===========
-         R1 R0
-    */
-    int16_t r;
-    int8_t t;
-    int8_t z = 0;
-    asm volatile(
-        "fmuls  %B[a], %B[b]      \n\t" // A1*B1
-        "movw   %A[r], r0         \n\t"
-
-        "fmul   %A[a], %A[b]      \n\t" // A0*B0
-        "adc    %A[r], %[z]       \n\t"
-        "mov    %[t] , r1         \n\t"
-
-        "fmulsu %B[a], %A[b]      \n\t" // A1*B0
-        "sbc    %B[r], %[z]       \n\t"
-        "add    %[t] , r0         \n\t"
-        "adc    %A[r], r1         \n\t"
-        "adc    %B[r], %[z]       \n\t"
-
-        "fmulsu %B[b], %A[a]      \n\t" // B1*A0
-        "sbc    %B[r], %[z]       \n\t"
-        "add    %[t] , r0         \n\t"
-        "adc    %A[r], r1         \n\t"
-        "adc    %B[r], %[z]       \n\t"
-        "clr    r1                \n\t"
-        : [r] "=&r" (r),
-          [t] "=&r" (t)
-        : [a] "a"   (a),
-          [b] "a"   (b),
-          [z] "r"   (z)
-        :
-    );
-    return r;
-}
-#else
-#define MUL15(a, b) (int16_t)(((int32_t)(int16_t)a * (int32_t)(int16_t)b) >> 15)
-#endif
 
 #ifdef __AVR__
 FORCEINLINE void SPRITEBITUNROLL(uint8_t bm, uint8_t nbm,
@@ -197,29 +120,12 @@ FORCEINLINE void SPRITEBITUNROLL(uint8_t bm, uint8_t nbm,
 }
 #endif
 
-extern const uint16_t recip_tab[128] PROGMEM;
-
-// for x!=0 returns 0xffff / x
-// for x==0 returns 0xffff
-// max error = 1ULP
-FORCEINLINE uint16_t recip(uint16_t x) {
-    if (x == 0) return 0xffff;
-
-    uint8_t n = CLZ16(x);
-    x <<= n;                                    // normalize, so MSB is 1
-    uint16_t r = pgm_read_word(&recip_tab[(x >> 8) - 0x80]);    // r = 0x7fffff / x, where x = 8 MSBs
-    r >>= 15 - n;                               // undo normalize
-    return r;
-}
-
 template<class T> FORCEINLINE T tmin(T a, T b) { return a < b ? a : b; }
 template<class T> FORCEINLINE T tmax(T a, T b) { return a < b ? b : a; }
 template<class T> FORCEINLINE T tclamp(T x, T a, T b) { return tmin(tmax(x, a), b); }
 template<class T> FORCEINLINE T tsign(T a, T scale) { return a < 0 ? -scale : a > 0 ? scale : 0; }
 
 void display_fill_screen(uint8_t color);
-uint16_t rsqrt(uint16_t x);
-void sincospi(uint16_t ux, int16_t* ps, int16_t* pc);
 void init_fast_random_seed();
 uint16_t fast_random();
 
@@ -346,12 +252,12 @@ void setup_lobby();
 uint8_t run_timeout();
 void run_lobby(uint8_t numPlayers);
 void update_multiplayer();
+bool receive_multiplayer();
 
 void reset_player();
 bool check_username_empty();
 void init_player();
 void update_player();
-bool handle_player_hit();
 
 void move_sprite(sprite_t *sprite, int8_t dX, int8_t dY);
 
