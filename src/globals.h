@@ -168,8 +168,8 @@ constexpr int8_t laserTaggerFlashOffsetY = -5;
 constexpr uint8_t texSize = 16;    // should be even
 constexpr uint8_t texBytes = texSize * texSize / 8;
 
-constexpr uint8_t titleImageWidth = 72;
-constexpr uint8_t titleImageHeight = 47;
+constexpr uint8_t titleImageWidth = 70;
+constexpr uint8_t titleImageHeight = 43;
 
 constexpr uint8_t menuImageWidth = 5;
 constexpr uint8_t menuImageHeight = 5;

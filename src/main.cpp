@@ -21,30 +21,6 @@ void setup() {
     arduboy.boot();
     arduboy.safeMode();
     arduboy.waitNoButtons();
-
-    sprites[0].id = 0;
-    sprites[0].eliminations = 0;
-    sprites[0].timeout = 1;
-    strcpy(sprites[0].name, "a");
-
-    sprites[1].id = 0;
-    sprites[1].eliminations = 2;
-    sprites[1].timeout = 1;
-    strcpy(sprites[1].name, "b");
-
-    sprites[2].id = 0;
-    sprites[2].eliminations = 1;
-    sprites[2].timeout = 1;
-    strcpy(sprites[2].name, "c");
-
-    sprites[3].id = 0;
-    sprites[3].eliminations = 0;
-    sprites[3].timeout = 1;
-    strcpy(sprites[3].name, "d");
-
-    draw_game_over();
-    display_fill_screen(false, 0x00);
-    while (true) {}
 }
 
 void loop() {
