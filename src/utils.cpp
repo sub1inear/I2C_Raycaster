@@ -31,7 +31,7 @@ void display_fill_screen(bool fill, uint8_t color) {
 }
 
 void wipe_effect() {
-    for (uint8_t count = 0; count < 128; count++) {
+    for (uint8_t count = 0; count < 100; count++) {
         for (uint16_t i = 0; i < 1024; i++) {
             uint8_t x = i % WIDTH;
             if (pgm_read_byte(&wipeEffectDelay[x]) > count) continue;
@@ -41,10 +41,11 @@ void wipe_effect() {
                 arduboy.sBuffer[i] |= 0x01; // add in carry bit to top of byte
                 arduboy.sBuffer[x] &= 0xfe; // remove carry from top of screen
             }
-            if (carry && i < 1024 - WIDTH) { // check if not last byte
+            if (carry && i < 1024 - WIDTH) { // check if not last row
                 arduboy.sBuffer[x] |= 0x01; // set carry flag at top of screen
             }
         }
+        arduboy.delayShort(10);
         display_fill_screen(false, 0x00);
     }
 }
