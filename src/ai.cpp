@@ -38,7 +38,7 @@ void update_ais() {
 
         uint16_t distSq = dX * dX + dY * dY; // Q0
         if (distSq < 20 * 20) {
-            if ((fast_random() & 0x3f) == 0) {
+            if ((fast_random() & 0x1f) == 0) {
                 // normalize vectors
                 uint16_t invDist = fixpt::rsqrt(distSq) >> 1; // Q15
 

@@ -10,7 +10,6 @@ void reset_player() {
     player->posY = pgm_read_word(&playerStartPos[id].posY);
     momX = 0;
     momY = 0;
-    shootCooldown = 0;
     orientation = pgm_read_word(&playerStartPos[id].orientation);  
     fixpt::sincospi(orientation, dirX, dirY);
 }
@@ -29,7 +28,7 @@ void init_player() {
     leaveTimer = 0;
     player->eliminations = 0;
     player->deaths = 0;
-    // needs init because set after first update multiplayer
+    // need init because set after first update multiplayer
     // not needed with player->powerupTaken
     player->otherPlayerHit = nullId;
     player->eliminatedBy = nullId;
@@ -75,9 +74,6 @@ void update_player() {
         }    
     } else
         leaveTimer = 0;
-
-    if (shootCooldown)
-        shootCooldown--;
     
     int8_t dX = (momX + 128) >> 8;  // Q8
     int8_t dY = (momY + 128) >> 8;  // Q8

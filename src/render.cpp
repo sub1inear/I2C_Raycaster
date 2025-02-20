@@ -188,7 +188,7 @@ void render() {
         uint16_t perpWallDist;
         uint8_t t;
         uint8_t side;
-        raycast((sprite_t *)&sprites[id], &perpWallDist, &t, &side, rayDirX, rayDirY, x > 60 && x < 68 && arduboy.justPressed(A_BUTTON) && !shootCooldown);
+        raycast((sprite_t *)&sprites[id], &perpWallDist, &t, &side, rayDirX, rayDirY, x > 60 && x < 68 && arduboy.justPressed(A_BUTTON));
         //save distance, for sprite clipping
         zbuf[x] = perpWallDist << 1;    // Q8
 
@@ -356,8 +356,7 @@ void render() {
             }
         }
     }
-    if (arduboy.justPressed(A_BUTTON) && !shootCooldown) {
-        shootCooldown = shootCooldownMax;
+    if (arduboy.justPressed(A_BUTTON)) {
         Sprites::drawPlusMask(laserTaggerX + laserTaggerFlashOffsetX, laserTaggerY + laserTaggerFlashOffsetY, laserTaggerFlashPlusMask, 0);
     }
     Sprites::drawPlusMask(laserTaggerX, laserTaggerY, laserTaggerPlusMask, 0);

@@ -144,7 +144,6 @@ constexpr int16_t turnSpeed = FIX16(0.01f, 15); // Q15
 constexpr int16_t friction = FIX16(0.9f, 8);    // Q8
 constexpr uint8_t initialMaxHealth = 20;
 constexpr uint8_t aiMaxHealth = 10;
-constexpr uint8_t shootCooldownMax = 35;
 
 constexpr uint8_t mapWidth = 64;
 constexpr uint8_t mapHeight = 64;
@@ -226,8 +225,6 @@ extern uint8_t leaveTimer;
 extern int16_t moveSpeed;
 extern uint8_t maxHealth;
 extern uint8_t shield;
-
-extern uint8_t shootCooldown;
 
 extern const uint8_t PROGMEM wipeEffectDelay[WIDTH];
 
