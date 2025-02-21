@@ -36,15 +36,38 @@ void stop_multiplayer() {
         sprites[i].timeout = 0;
 }
 
+bool check_no_i2c() {
+    if (I2C::detectEmulator()) {
+        font3x5.setCursor(CENTER_STR("Emulator does not support"), 25);
+        font3x5.print(F("Emulator"));
+    } else {
+        // read bootloader byte that changes based on platform
+        uint8_t data = pgm_read_byte(29712);
+        switch (data) {
+        case 170: // Emulator no bootloader
+        case 213: // Mini
+            return false;
+        case 202: // FX
+            font3x5.setCursor(CENTER_STR("Arduboy FX does not support"), 25);
+            font3x5.print(F("Arduboy FX"));
+            break;
+        default: // Non-standard Arduboy
+            font3x5.setCursor(CENTER_STR("Non-standard Arduboy does not support"), 25);
+            font3x5.print(F("Non-standard Arduboy"));
+            break;
+        }
+    }
+    font3x5.print(F(" does not support\n    I2C multiplayer."));
+    display_fill_screen(true, 0x00);
+    while (!arduboy.justPressed(A_BUTTON) && arduboy.notPressed(B_BUTTON))
+        arduboy.pollButtons();
+    return true;
+}
+
 void setup_lobby() {
     I2C::init();
 
-    if (I2C::detectEmulator()) {
-        font3x5.setCursor(CENTER_STR("Emulator does not support"), 25);
-        font3x5.print(F("Emulator does not support\n    I2C multiplayer."));
-        display_fill_screen(true, 0x00);
-        while (!arduboy.justPressed(A_BUTTON) && arduboy.notPressed(B_BUTTON))
-            arduboy.pollButtons();
+    if (check_no_i2c()) {
         state = TITLE;
         return;
     }

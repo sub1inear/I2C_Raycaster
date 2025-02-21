@@ -253,6 +253,7 @@ void update_ais();
 void on_receive();
 void start_multiplayer();
 void stop_multiplayer();
+bool check_no_i2c();
 void setup_lobby();
 uint8_t run_timeout();
 void run_lobby(uint8_t numPlayers);
