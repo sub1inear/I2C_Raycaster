@@ -116,8 +116,9 @@ void run_lobby(uint8_t numPlayers) {
         
     font3x5.setCursor(0, 0);
     font3x5.print(numPlayers);
-    font3x5.print(F(" of " STR(I2C_MAX_PLAYERS) " players have joined\nPress A to start\nId "));
-    font3x5.print(id);
+    font3x5.print(F(" of " STR(I2C_MAX_PLAYERS) " players have joined\nPress A to start"));
+    // font3x5.print(F(" of " STR(I2C_MAX_PLAYERS) " players have joined\nPress A to start\nId "));
+    // font3x5.print(id);
     if (arduboy.justPressed(A_BUTTON)) {
         uint8_t message = nullId;
         I2C::write(0x00, &message, true);

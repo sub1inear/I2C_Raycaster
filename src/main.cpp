@@ -29,7 +29,7 @@ void loop() {
         return;
     }
 #else
-    if (!arduboy.nextFrameDEV()) {
+    if (!arduboy.nextFrame()) {
         return;
     }
 #endif
