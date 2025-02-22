@@ -58,6 +58,7 @@ void loop() {
         draw_settings_screen();
         break;
     case LOBBY_INIT:
+        wipe_effect();
         setup_lobby();
         break;
     case LOBBY: {
@@ -66,10 +67,10 @@ void loop() {
         break;
     }
     case GAME_INIT:
-        wipe_effect();
         init_fast_random_seed();
         init_powerups();
         if (singleplayer) {
+            wipe_effect();
             id = singleplayerId;
             init_ais();
         } else
@@ -99,6 +100,19 @@ void loop() {
         draw_game_over();
         break;
     }
-    bool clear = state != GAME_INIT && state != GAME_OVER_INIT;
+    // cannot clear tick before wipe_effect
+    bool clear = true;
+    switch (state) {
+    case GAME_INIT:
+        if (singleplayer)
+            clear = false;
+        break;
+    case GAME_OVER_INIT:
+    case LOBBY_INIT:
+        clear = false;
+        break;
+    default:
+        break;
+    }
     display_fill_screen(clear, flash ? 0xff : 0x00);
 }

@@ -52,12 +52,15 @@ bool check_no_i2c() {
             font3x5.print(F("Arduboy FX"));
             break;
         default: // Non-standard Arduboy
-            font3x5.setCursor(CENTER_STR("Non-standard Arduboy does not support"), 25);
-            font3x5.print(F("Non-standard Arduboy"));
+            font3x5.setCursor(CENTER_STR("Unknown Arduboy does not support"), 25);
+            font3x5.print(F("Unknown Arduboy"));
             break;
         }
     }
-    font3x5.print(F(" does not support\n    I2C multiplayer."));
+    font3x5.print(F(" does not support\n"));
+    font3x5.setCursor(CENTER_STR("I2C multiplayer."), 25 + font3x5._lineHeight);
+    font3x5.print(F("I2C multiplayer."));
+
     display_fill_screen(true, 0x00);
     while (!arduboy.justPressed(A_BUTTON) && arduboy.notPressed(B_BUTTON))
         arduboy.pollButtons();

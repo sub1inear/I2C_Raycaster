@@ -117,7 +117,7 @@ void update_credits_screen() {
 
 void draw_credits_screen() {
     font3x5.setCursor(20, creditsY);
-    font3x5.print(F("Programming\nSublinear\nZed\n\n\n\nArt\nkenny.nl\ngriffpatch\nAmazingmax Fonts\n\n\nThanks to\nHaloopdy\nLode Vandevenne\nBrow1067\nBateske"));
+    font3x5.print(F("Programming\nSublinear\nZed\n\n\n\nArt\nkenny.nl\nGriffpatch\nAmazingmax Fonts\nFilmote\n\n\nThanks to\nHaloopdy\nLode Vandevenne\nBrow1067\nBateske"));
 }
 
 bool check_game_over() {
