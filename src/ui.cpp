@@ -121,8 +121,7 @@ void draw_credits_screen() {
 }
 
 bool check_game_over() {
-    gameTimer++;
-    return gameTimer > gameTimerMax;
+    return millis() - gameStart > gameMillisMax;
 }
 
 void update_game_over() {

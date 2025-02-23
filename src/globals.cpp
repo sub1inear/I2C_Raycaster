@@ -36,7 +36,7 @@ int8_t creditsY;
 
 uint16_t seed;
 
-uint16_t gameTimer;
+uint32_t gameStart;
 
 uint8_t leaveTimer;
 

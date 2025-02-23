@@ -180,7 +180,7 @@ constexpr uint8_t numPowerups = 12;
 
 constexpr uint8_t singleplayerId = 0;
 
-constexpr uint16_t gameTimerMax = (uint16_t)1 * 60 * 60;
+constexpr uint32_t gameMillisMax = (uint16_t)1 * 60 * 1000;
 
 constexpr uint8_t leaveTimerMax = 200;
 
@@ -218,7 +218,7 @@ extern int8_t creditsY;
 
 extern uint16_t seed;
 
-extern uint16_t gameTimer;
+extern uint32_t gameStart;
 
 extern uint8_t leaveTimer;
 

@@ -76,7 +76,7 @@ void loop() {
         } else
             start_multiplayer();
         init_player();
-        gameTimer = 0;
+        gameStart = millis();
         state = GAME;
     case GAME:
         update_player();
