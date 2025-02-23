@@ -134,10 +134,15 @@ void update_game_over() {
 
 void draw_game_over() {
     uint8_t eliminations[I2C_MAX_PLAYERS];
-    for (uint8_t i = 0; i < I2C_MAX_PLAYERS; i++)
-        eliminations[i] = sprites[i].timeout || i == id ? sprites[i].eliminations : 0;
+    uint8_t orderIdxs[I2C_MAX_PLAYERS];
+    for (uint8_t i = 0; i < I2C_MAX_PLAYERS; i++) {
+        if (sprites[i].timeout || i == id) {
+            eliminations[i] = sprites[i].eliminations;
+            orderIdxs[i] = i;
+        } else
+            eliminations[i] = 0;
+    }
 
-    uint8_t orderIdxs[I2C_MAX_PLAYERS] = {0, 1, 2, 3};
     for (uint8_t i = 0; i < I2C_MAX_PLAYERS - 1; i++) {
         for (uint8_t j = 0; j < I2C_MAX_PLAYERS - i - 1; j++) {
             if (eliminations[j] < eliminations[j + 1]) {
@@ -147,7 +152,7 @@ void draw_game_over() {
         }
     }
     uint8_t playerOrder;
-    for (uint8_t i = 0; i < I2C_MAX_PLAYERS - 1; i++) {
+    for (uint8_t i = 0; i < I2C_MAX_PLAYERS; i++) {
         if (orderIdxs[i] == id) {
             playerOrder = i;
             break;
