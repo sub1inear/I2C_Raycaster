@@ -26,6 +26,7 @@ bool check_username_empty() {
 void init_player() {
     sprite_t *player = (sprite_t *)&sprites[id];
     leaveTimer = 0;
+    player->gameOver = false;
     player->eliminations = 0;
     player->deaths = 0;
     // need init because set after first update multiplayer

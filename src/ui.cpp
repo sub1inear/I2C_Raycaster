@@ -121,7 +121,18 @@ void draw_credits_screen() {
 }
 
 bool check_game_over() {
-    return millis() - gameStart > gameMillisMax;
+    bool gameOver = false;
+    if (millis() - gameStart > gameMillisMax) {
+        gameOver = true;
+    }
+    for (uint8_t i = 0; i < I2C_MAX_PLAYERS; i++) {
+        if (sprites[i].timeout && sprites[i].gameOver) {
+            gameOver = true;
+            break;
+        }
+    }
+    sprites[id].gameOver = gameOver;
+    return gameOver;
 }
 
 void update_game_over() {

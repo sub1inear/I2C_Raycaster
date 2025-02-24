@@ -5,7 +5,7 @@ void on_receive() {
     uint8_t *buffer = I2C::getBuffer();
     uint8_t id = ((sprite_t *)buffer)->id;
     uint8_t *sprite = (uint8_t *)&sprites[id];
-    for (uint8_t i = 0; i < sizeof(sprite_t) - 1; i++) { // copy all but id
+    for (uint8_t i = 0; i < sizeof(sprite_t) - 2; i++) { // copy all but id and type
         sprite[i] = buffer[i];
     }
     sprites[id].timeout = 1;

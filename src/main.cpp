@@ -81,6 +81,8 @@ void loop() {
     case GAME:
         update_player();
         flash |= update_powerups();
+        if (check_game_over())
+            state = GAME_OVER_INIT;
         if (singleplayer)
             update_ais();
         else {
@@ -89,8 +91,6 @@ void loop() {
         }
         render();
         flash |= receive_multiplayer();
-        if (check_game_over())
-            state = GAME_OVER_INIT;
         break;
     case GAME_OVER_INIT:
         wipe_effect();

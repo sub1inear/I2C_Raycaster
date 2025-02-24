@@ -59,8 +59,10 @@ struct sprite_t {
     uint8_t timeout;
     uint8_t health;
     uint8_t powerupTaken;
+    bool gameOver;
+    // not processed after here
     SpriteType type;
-    uint8_t id; // must be last
+    uint8_t id;
 };
 
 
