@@ -143,14 +143,14 @@ void update_game_over() {
 }
 
 void draw_game_over() {
-    uint8_t eliminations[I2C_MAX_PLAYERS];
+    int8_t eliminations[I2C_MAX_PLAYERS];
     uint8_t orderIdxs[I2C_MAX_PLAYERS];
     for (uint8_t i = 0; i < I2C_MAX_PLAYERS; i++) {
         if (sprites[i].timeout || i == id) {
             eliminations[i] = sprites[i].eliminations;
             orderIdxs[i] = i;
         } else
-            eliminations[i] = 0;
+            eliminations[i] = -1;
     }
 
     for (uint8_t i = 0; i < I2C_MAX_PLAYERS - 1; i++) {
@@ -182,7 +182,7 @@ void draw_game_over() {
             uint8_t orderIdx = orderIdxs[i];
             font3x5.print((char *)sprites[orderIdx].name);
             font3x5.setX(CENTER_WIDTH(0) + STR_WIDTH(3));
-            font3x5.print(sprites[orderIdx].eliminations);
+            font3x5.print((uint8_t)sprites[orderIdx].eliminations);
             font3x5.setX(CENTER_WIDTH(0) + STR_WIDTH(7));
             font3x5.print(sprites[orderIdx].deaths);
             font3x5.newline();

@@ -70,7 +70,7 @@ void update_ais() {
             }
         }
         if (player->eliminatedBy == i)
-            if (ai->eliminations < 255)
+            if (ai->eliminations < 127)
                 ai->eliminations++;
     }
 }

@@ -157,7 +157,7 @@ bool receive_multiplayer() {
             hit = true;
         }
         if (otherPlayer->eliminatedBy == id)
-            if (player->deaths < 255)
+            if (player->eliminations < 127)
                 player->eliminations++;
         if (otherPlayer->powerupTaken != nullId)
             sprites[otherPlayer->powerupTaken].timeout = 0;

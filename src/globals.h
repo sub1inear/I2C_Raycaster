@@ -54,7 +54,7 @@ struct sprite_t {
     char name[ARDUBOY_UNIT_NAME_BUFFER_SIZE];
     uint8_t otherPlayerHit;
     uint8_t eliminatedBy;
-    uint8_t eliminations;
+    int8_t eliminations;
     uint8_t deaths;
     uint8_t timeout;
     uint8_t health;
