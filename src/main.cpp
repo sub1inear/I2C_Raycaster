@@ -75,6 +75,7 @@ void loop() {
             init_ais();
         } else
             start_multiplayer();
+        init_all_players();
         init_player();
         gameStart = millis();
         state = GAME;

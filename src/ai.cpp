@@ -10,8 +10,6 @@ void reset_ai(sprite_t *ai) {
 void init_ai(sprite_t *ai) {
     ai->deaths = 0;
     ai->eliminations = 0;
-    ai->otherPlayerHit = nullId;
-    ai->eliminatedBy = nullId;
     ai->powerupTaken = nullId;
     ai->name[0] = 'A';
     ai->name[1] = 'I';

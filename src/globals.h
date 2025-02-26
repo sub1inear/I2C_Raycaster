@@ -264,6 +264,7 @@ bool receive_multiplayer();
 
 void reset_player();
 bool check_username_empty();
+void init_all_players();
 void init_player();
 void update_player();
 

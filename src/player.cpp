@@ -23,16 +23,19 @@ bool check_username_empty() {
     return true;
 }
 
+void init_all_players() {
+    for (uint8_t i = 0; i < I2C_MAX_PLAYERS; i++) {
+        sprite_t *player = (sprite_t *)&sprites[i];
+        player->gameOver = false;
+        player->otherPlayerHit = nullId;
+        player->eliminatedBy = nullId;
+    }
+}
 void init_player() {
     sprite_t *player = (sprite_t *)&sprites[id];
     leaveTimer = 0;
-    player->gameOver = false;
     player->eliminations = 0;
     player->deaths = 0;
-    // need init because set after first update multiplayer
-    // not needed with player->powerupTaken
-    player->otherPlayerHit = nullId;
-    player->eliminatedBy = nullId;
     if (check_username_empty())
         strcpy_P((char *)player->name, PSTR("Player"));
     reset_player();
