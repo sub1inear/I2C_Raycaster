@@ -142,6 +142,14 @@ bool receive_multiplayer() {
     player->eliminatedBy = nullId;
     for (uint8_t i = 0; i < I2C_MAX_PLAYERS; i++) {
         sprite_t *otherPlayer = (sprite_t *)&sprites[i];
+        if (otherPlayer->eliminatedBy == id)
+            if (player->eliminations < 127)
+                player->eliminations++;
+        if (otherPlayer->powerupTaken != nullId)
+            sprites[otherPlayer->powerupTaken].timeout = 0;
+    }
+    for (uint8_t i = 0; i < I2C_MAX_PLAYERS; i++) {
+        sprite_t *otherPlayer = (sprite_t *)&sprites[i];
         if (otherPlayer->otherPlayerHit == id) {
             if (shield)
                 shield--;
@@ -152,15 +160,11 @@ bool receive_multiplayer() {
                     if (player->deaths < 255)
                         player->deaths++;
                     player->eliminatedBy = i;
+                    return true;
                 }
             }
             hit = true;
         }
-        if (otherPlayer->eliminatedBy == id)
-            if (player->eliminations < 127)
-                player->eliminations++;
-        if (otherPlayer->powerupTaken != nullId)
-            sprites[otherPlayer->powerupTaken].timeout = 0;
     }
     return hit;
 }
