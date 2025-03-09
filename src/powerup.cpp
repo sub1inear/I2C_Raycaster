@@ -30,7 +30,7 @@ bool update_powerups() {
                     health = maxHealth;
                     break;
                 case SHIELD:
-                    shield += 2;
+                    shield += 5;
                     break;
                 case SPEED_BOOST:
                     if (moveSpeed < maxMoveSpeed)

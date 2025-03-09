@@ -77,20 +77,25 @@ void setup_lobby() {
     state = LOBBY;
 
     // handshake
-    for (id = I2C_MAX_PLAYERS - 1; id >= 0; ) {
+    // loops through every id and takes it
+    // if we return from TW_MR_SLA_NACK
+    // there could be a futher id we haven't talked to who has started
+    uint8_t i;
+    id = nullId;
+    for (i = 0; i < I2C_MAX_PLAYERS; i++) {
         uint8_t otherPlayerState;
-        I2C::read(I2C::getAddressFromId(id), &otherPlayerState);
+        I2C::read(I2C::getAddressFromId(i), &otherPlayerState);
         switch (I2C::getTWError()) {
         case TW_MR_SLA_NACK:
-            I2C::setAddress(I2C::getAddressFromId(id), true);
+            id = i;
+            I2C::setAddress(I2C::getAddressFromId(i), true);
 
-            sprites[id].id = id;
-            arduboy.readUnitName((char *)sprites[id].name);
+            sprites[i].id = i;
+            arduboy.readUnitName((char *)sprites[i].name);
             I2C::onReceive(handshake_on_receive);
             I2C::onRequest(handshake_on_request);
-            return;
+            break;
         case TW_SUCCESS:
-            id--;
             switch (otherPlayerState) {
             case GAME_INIT:
             case GAME:
@@ -100,7 +105,10 @@ void setup_lobby() {
             break;
         }
     }
-    state = TITLE;
+    if (id == nullId)
+        // no more slots left
+        state = TITLE;
+
 }
 
 uint8_t run_timeout() {
@@ -145,6 +153,7 @@ bool receive_multiplayer() {
         if (otherPlayer->eliminatedBy == id)
             if (player->eliminations < 127)
                 player->eliminations++;
+        // late joiner will not receive this update but there's no simple way to fix that
         if (otherPlayer->powerupTaken != nullId)
             sprites[otherPlayer->powerupTaken].timeout = 0;
     }

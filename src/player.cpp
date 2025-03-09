@@ -29,6 +29,7 @@ void init_all_players() {
         player->gameOver = false;
         player->otherPlayerHit = nullId;
         player->eliminatedBy = nullId;
+        player->powerupTaken = nullId;
     }
 }
 void init_player() {

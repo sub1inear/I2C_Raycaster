@@ -229,15 +229,15 @@ const powerup_startpos_t powerupStartPos[numPowerups] PROGMEM = {
 	{ FIX16(8.0f, 8), FIX16(55.0f, 8), HEALTH },
 	{ FIX16(8.0f, 8), FIX16(8.0f, 8), HEALTH },
 
-	{ FIX16(31.5f, 8), FIX16(8.0f, 8), SPEED_BOOST },
-	{ FIX16(56.0f, 8), FIX16(31.5f, 8), SPEED_BOOST },
-	{ FIX16(31.5f, 8), FIX16(55.0f, 8), SPEED_BOOST },
-	{ FIX16(7.0f, 8), FIX16(31.5f, 8), SPEED_BOOST },
+	{ FIX16(31.0f, 8), FIX16(8.0f, 8), SPEED_BOOST },
+	{ FIX16(56.0f, 8), FIX16(31.0f, 8), SPEED_BOOST },
+	{ FIX16(31.0f, 8), FIX16(55.0f, 8), SPEED_BOOST },
+	{ FIX16(7.0f, 8), FIX16(31.0f, 8), SPEED_BOOST },
 
-	{ FIX16(35.5f, 8), FIX16(17.5f, 8), SHIELD },
-	{ FIX16(35.5f, 8), FIX16(45.5f, 8), SHIELD },
-	{ FIX16(27.5f, 8), FIX16(46.5f, 8), SHIELD },
-	{ FIX16(17.5f, 8), FIX16(27.5f, 8), SHIELD },
+	{ FIX16(35.0f, 8), FIX16(17.0f, 8), SHIELD },
+	{ FIX16(35.0f, 8), FIX16(45.0f, 8), SHIELD },
+	{ FIX16(27.0f, 8), FIX16(46.0f, 8), SHIELD },
+	{ FIX16(17.0f, 8), FIX16(27.0f, 8), SHIELD },
 };
 
 const char numberSuffixes[I2C_MAX_PLAYERS][3] PROGMEM = {
