@@ -1,9 +1,10 @@
 #include "globals.h"
 
+#ifdef __AVR__
 void display_fill_screen(bool fill, uint8_t color) {
     // modified from Arduboy2 lib
     uint16_t count;
-    
+
     uint8_t *ptr = arduboy.sBuffer;
 
     asm volatile (
@@ -29,6 +30,12 @@ void display_fill_screen(bool fill, uint8_t color) {
           [color]   "r"   (color)
     );
 }
+#else
+void display_fill_screen(bool fill, uint8_t color) {
+    arduboy.display();
+    arduboy.fillScreen(color == 0xff ? WHITE : BLACK);
+}
+#endif
 
 void wipe_effect() {
     for (uint8_t count = 0; count < 100; count++) {
